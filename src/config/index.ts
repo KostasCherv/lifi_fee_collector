@@ -15,6 +15,7 @@ export interface Config {
   scraper: {
     defaultInterval: number;
     defaultStartingBlock: number;
+    maxBlockRange: number;
     chainConfigPath?: string | undefined;
   };
   logging: {
@@ -46,6 +47,7 @@ const config: Config = {
   scraper: {
     defaultInterval: parseInt(process.env['DEFAULT_SCRAPER_INTERVAL'] || '30000', 10),
     defaultStartingBlock: parseInt(process.env['DEFAULT_STARTING_BLOCK'] || '70000000', 10),
+    maxBlockRange: parseInt(process.env['DEFAULT_MAX_BLOCK_RANGE'] || '1000', 10),
     chainConfigPath: process.env['CHAIN_CONFIG_PATH'],
   },
   logging: {
