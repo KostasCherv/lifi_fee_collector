@@ -34,6 +34,10 @@ export interface Config {
     polygonRpcUrl: string;
     polygonContractAddress: string;
   };
+  redis: {
+    url: string;
+    cacheTtl: number;
+  };
 }
 
 const config: Config = {
@@ -65,6 +69,10 @@ const config: Config = {
   blockchain: {
     polygonRpcUrl: process.env['POLYGON_RPC_URL'] || 'https://polygon-rpc.com',
     polygonContractAddress: process.env['POLYGON_CONTRACT_ADDRESS'] || '0xbD6C7B0d2f68c2b7805d88388319cfB6EcB50eA9',
+  },
+  redis: {
+    url: process.env['REDIS_URL'] || 'redis://localhost:6379',
+    cacheTtl: parseInt(process.env['REDIS_CACHE_TTL'] || '30', 10), // seconds
   },
 };
 

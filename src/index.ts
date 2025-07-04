@@ -1,14 +1,31 @@
 import express from 'express';
+import helmet from 'helmet';
 import config from '@/config';
 import { databaseService } from '@/services/database';
 import { scraperService } from '@/services/scraper';
 import { logger } from '@/utils/logger';
+import { corsMiddleware } from '@/middleware/cors';
+import { requestLogger } from '@/middleware/logging';
+import { errorHandler, notFoundHandler } from '@/middleware/errorHandler';
+import routes from '@/routes';
 
 const app = express();
 const port = config.app.port;
 
-// Basic middleware
-app.use(express.json());
+// Security middleware
+if (config.security.helmetEnabled) {
+  app.use(helmet());
+}
+
+// CORS middleware
+app.use(corsMiddleware);
+
+// Request logging middleware
+app.use(requestLogger);
+
+// Body parsing middleware
+app.use(express.json({ limit: '10mb' }));
+app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
 app.get('/', (_req, res) => {
   res.json({
@@ -61,6 +78,15 @@ app.get('/health/scraper', async (_req, res) => {
     });
   }
 });
+
+// Mount API routes
+app.use(routes);
+
+// 404 handler (must be before error handler)
+app.use(notFoundHandler);
+
+// Error handling middleware (must be last)
+app.use(errorHandler);
 
 async function startServer() {
   try {

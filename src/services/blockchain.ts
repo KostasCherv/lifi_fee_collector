@@ -182,6 +182,23 @@ class BlockchainService {
     }, this.healthCheckInterval);
   }
 
+  async validateProvider(rpcUrl: string): Promise<void> {
+    try {
+      logger.info(`Validating RPC provider: ${rpcUrl}`);
+      
+      // Create a temporary provider to test connectivity
+      const provider = new ethers.providers.JsonRpcProvider(rpcUrl);
+      
+      // Test basic functionality
+      await provider.getBlockNumber();
+      
+      logger.info(`✅ RPC provider validation successful: ${rpcUrl}`);
+    } catch (error) {
+      logger.error(`RPC provider validation failed: ${rpcUrl}`, error);
+      throw new Error(`RPC validation failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    }
+  }
+
   async shutdown(): Promise<void> {
     logger.info('Shutting down blockchain service...');
     this.providers.clear();
