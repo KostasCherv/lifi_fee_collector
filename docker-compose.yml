@@ -1,0 +1,33 @@
+
+
+services:
+  app:
+    build: .
+    ports:
+      - "3000:3000"
+    environment:
+      - NODE_ENV=development
+      - MONGODB_URI=mongodb://mongodb:27017/fee_collector
+      - PORT=3000
+      - DEFAULT_SCRAPER_INTERVAL=30000
+      - DEFAULT_STARTING_BLOCK=70000000
+    depends_on:
+      - mongodb
+    volumes:
+      - ./src:/app/src
+      - ./logs:/app/logs
+    restart: unless-stopped
+
+  mongodb:
+    image: mongo:7.0
+    ports:
+      - "27017:27017"
+    environment:
+      - MONGO_INITDB_DATABASE=fee_collector
+    volumes:
+      - mongodb_data:/data/db
+      - ./mongo-init.js:/docker-entrypoint-initdb.d/mongo-init.js:ro
+    restart: unless-stopped
+
+volumes:
+  mongodb_data: 
