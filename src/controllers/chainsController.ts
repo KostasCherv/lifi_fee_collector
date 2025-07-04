@@ -8,6 +8,503 @@ import { logger } from '@/utils/logger';
 import Joi from 'joi';
 import { clearApiCache } from '@/middleware/cache';
 
+/**
+ * @swagger
+ * /api/v1/chains/status:
+ *   get:
+ *     summary: Get status of all chains
+ *     description: Retrieve the status and health information for all configured chains
+ *     tags: [Chains]
+ *     responses:
+ *       200:
+ *         description: Chain status retrieved successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ChainsStatusResponse'
+ *             example:
+ *               success: true
+ *               data:
+ *                 chains:
+ *                   - chainId: 137
+ *                     name: 'Polygon'
+ *                     isEnabled: true
+ *                     workerStatus: 'running'
+ *                     lastWorkerStart: '2024-01-15T10:30:00Z'
+ *                     lastWorkerError: null
+ *                     lastProcessedBlock: 70000001
+ *                     errorCount: 0
+ *                     eventCount: 150
+ *                 summary:
+ *                   totalChains: 1
+ *                   activeChains: 1
+ *                   totalEvents: 150
+ *               timestamp: '2024-01-15T10:30:00Z'
+ *       429:
+ *         description: Rate limit exceeded
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ *       500:
+ *         description: Internal server error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ * 
+ * /api/v1/chains/{chainId}/status:
+ *   get:
+ *     summary: Get status of specific chain
+ *     description: Retrieve detailed status and configuration for a specific chain
+ *     tags: [Chains]
+ *     parameters:
+ *       - $ref: '#/components/parameters/chainIdParam'
+ *     responses:
+ *       200:
+ *         description: Chain status retrieved successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     chainId:
+ *                       type: integer
+ *                       example: 137
+ *                     name:
+ *                       type: string
+ *                       example: 'Polygon'
+ *                     isEnabled:
+ *                       type: boolean
+ *                       example: true
+ *                     workerStatus:
+ *                       type: string
+ *                       enum: ['running', 'stopped', 'error', 'starting']
+ *                       example: 'running'
+ *                     lastWorkerStart:
+ *                       type: string
+ *                       format: date-time
+ *                       example: '2024-01-15T10:30:00Z'
+ *                     lastWorkerError:
+ *                       type: string
+ *                       nullable: true
+ *                       example: null
+ *                     lastProcessedBlock:
+ *                       type: integer
+ *                       example: 70000001
+ *                     errorCount:
+ *                       type: integer
+ *                       example: 0
+ *                     configuration:
+ *                       type: object
+ *                       properties:
+ *                         rpcUrl:
+ *                           type: string
+ *                           example: 'https://polygon-rpc.com'
+ *                         contractAddress:
+ *                           type: string
+ *                           example: '0xbD6C7B0d2f68c2b7805d88388319cfB6EcB50eA9'
+ *                         startingBlock:
+ *                           type: integer
+ *                           example: 70000000
+ *                         scanInterval:
+ *                           type: integer
+ *                           example: 30000
+ *                         maxBlockRange:
+ *                           type: integer
+ *                           example: 1000
+ *                         retryAttempts:
+ *                           type: integer
+ *                           example: 3
+ *                 timestamp:
+ *                   type: string
+ *                   format: date-time
+ *                   example: '2024-01-15T10:30:00Z'
+ *       400:
+ *         description: Invalid chain ID
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ *       404:
+ *         description: Chain not found
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ *       429:
+ *         description: Rate limit exceeded
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ *       500:
+ *         description: Internal server error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ * 
+ * /api/v1/chains/start:
+ *   post:
+ *     summary: Start a new chain worker
+ *     description: Create a new chain configuration and start the event scraper worker
+ *     tags: [Chains]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - chainId
+ *               - name
+ *               - rpcUrl
+ *               - contractAddress
+ *             properties:
+ *               chainId:
+ *                 type: integer
+ *                 description: EVM chain ID
+ *                 example: 137
+ *               name:
+ *                 type: string
+ *                 description: Human-readable chain name
+ *                 example: 'Polygon'
+ *                 minLength: 1
+ *                 maxLength: 50
+ *               rpcUrl:
+ *                 type: string
+ *                 description: RPC endpoint URL
+ *                 example: 'https://polygon-rpc.com'
+ *               contractAddress:
+ *                 type: string
+ *                 description: FeeCollector contract address
+ *                 pattern: '^0x[a-fA-F0-9]{40}$'
+ *                 example: '0xbD6C7B0d2f68c2b7805d88388319cfB6EcB50eA9'
+ *               startingBlock:
+ *                 type: integer
+ *                 description: Starting block for event scanning
+ *                 example: 70000000
+ *               scanInterval:
+ *                 type: integer
+ *                 description: Scan interval in milliseconds (5000-300000)
+ *                 example: 30000
+ *                 minimum: 5000
+ *                 maximum: 300000
+ *               maxBlockRange:
+ *                 type: integer
+ *                 description: Maximum blocks to scan per iteration (100-10000)
+ *                 example: 1000
+ *                 minimum: 100
+ *                 maximum: 10000
+ *               retryAttempts:
+ *                 type: integer
+ *                 description: Number of retry attempts for failed operations (1-10)
+ *                 example: 3
+ *                 minimum: 1
+ *                 maximum: 10
+ *           example:
+ *             chainId: 137
+ *             name: 'Polygon'
+ *             rpcUrl: 'https://polygon-rpc.com'
+ *             contractAddress: '0xbD6C7B0d2f68c2b7805d88388319cfB6EcB50eA9'
+ *             startingBlock: 70000000
+ *             scanInterval: 30000
+ *             maxBlockRange: 1000
+ *             retryAttempts: 3
+ *     responses:
+ *       200:
+ *         description: Chain worker started successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 message:
+ *                   type: string
+ *                   example: 'Chain worker started successfully'
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     chainId:
+ *                       type: integer
+ *                       example: 137
+ *                     workerStatus:
+ *                       type: string
+ *                       example: 'running'
+ *                     lastWorkerStart:
+ *                       type: string
+ *                       format: date-time
+ *                       example: '2024-01-15T10:30:00Z'
+ *                 timestamp:
+ *                   type: string
+ *                   format: date-time
+ *                   example: '2024-01-15T10:30:00Z'
+ *       400:
+ *         description: Invalid configuration or validation error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ *       409:
+ *         description: Chain ID already exists
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ *       429:
+ *         description: Rate limit exceeded
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ *       500:
+ *         description: Internal server error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ * 
+ * /api/v1/chains/{chainId}/stop:
+ *   put:
+ *     summary: Stop a chain worker
+ *     description: Stop the event scraper worker for a specific chain
+ *     tags: [Chains]
+ *     parameters:
+ *       - $ref: '#/components/parameters/chainIdParam'
+ *     responses:
+ *       200:
+ *         description: Chain worker stopped successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 message:
+ *                   type: string
+ *                   example: 'Chain worker stopped successfully'
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     chainId:
+ *                       type: integer
+ *                       example: 137
+ *                     workerStatus:
+ *                       type: string
+ *                       example: 'stopped'
+ *                 timestamp:
+ *                   type: string
+ *                   format: date-time
+ *                   example: '2024-01-15T10:30:00Z'
+ *       400:
+ *         description: Invalid chain ID
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ *       404:
+ *         description: Chain not found
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ *       429:
+ *         description: Rate limit exceeded
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ *       500:
+ *         description: Internal server error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ * 
+ * /api/v1/chains/{chainId}/update:
+ *   put:
+ *     summary: Update chain configuration
+ *     description: Update the configuration for an existing chain
+ *     tags: [Chains]
+ *     parameters:
+ *       - $ref: '#/components/parameters/chainIdParam'
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               name:
+ *                 type: string
+ *                 description: Human-readable chain name
+ *                 example: 'Updated Polygon'
+ *                 minLength: 1
+ *                 maxLength: 50
+ *               rpcUrl:
+ *                 type: string
+ *                 description: RPC endpoint URL
+ *                 example: 'https://new-polygon-rpc.com'
+ *               contractAddress:
+ *                 type: string
+ *                 description: FeeCollector contract address
+ *                 pattern: '^0x[a-fA-F0-9]{40}$'
+ *                 example: '0xbD6C7B0d2f68c2b7805d88388319cfB6EcB50eA9'
+ *               startingBlock:
+ *                 type: integer
+ *                 description: Starting block for event scanning
+ *                 example: 70000000
+ *               scanInterval:
+ *                 type: integer
+ *                 description: Scan interval in milliseconds (5000-300000)
+ *                 example: 30000
+ *                 minimum: 5000
+ *                 maximum: 300000
+ *               maxBlockRange:
+ *                 type: integer
+ *                 description: Maximum blocks to scan per iteration (100-10000)
+ *                 example: 1000
+ *                 minimum: 100
+ *                 maximum: 10000
+ *               retryAttempts:
+ *                 type: integer
+ *                 description: Number of retry attempts for failed operations (1-10)
+ *                 example: 3
+ *                 minimum: 1
+ *                 maximum: 10
+ *           example:
+ *             name: 'Updated Polygon'
+ *             scanInterval: 60000
+ *             maxBlockRange: 2000
+ *     responses:
+ *       200:
+ *         description: Chain configuration updated successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 message:
+ *                   type: string
+ *                   example: 'Chain configuration updated successfully'
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     chainId:
+ *                       type: integer
+ *                       example: 137
+ *                     updatedFields:
+ *                       type: array
+ *                       items:
+ *                         type: string
+ *                       example: ['name', 'scanInterval', 'maxBlockRange']
+ *                 timestamp:
+ *                   type: string
+ *                   format: date-time
+ *                   example: '2024-01-15T10:30:00Z'
+ *       400:
+ *         description: Invalid parameters or validation error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ *       404:
+ *         description: Chain not found
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ *       429:
+ *         description: Rate limit exceeded
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ *       500:
+ *         description: Internal server error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ * 
+ * /api/v1/chains/{chainId}:
+ *   delete:
+ *     summary: Delete chain configuration
+ *     description: Remove a chain configuration and stop its worker
+ *     tags: [Chains]
+ *     parameters:
+ *       - $ref: '#/components/parameters/chainIdParam'
+ *     responses:
+ *       200:
+ *         description: Chain configuration deleted successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 message:
+ *                   type: string
+ *                   example: 'Chain configuration deleted successfully'
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     chainId:
+ *                       type: integer
+ *                       example: 137
+ *                     deletedConfiguration:
+ *                       type: boolean
+ *                       example: true
+ *                     deletedScraperState:
+ *                       type: boolean
+ *                       example: true
+ *                 timestamp:
+ *                   type: string
+ *                   format: date-time
+ *                   example: '2024-01-15T10:30:00Z'
+ *       400:
+ *         description: Invalid chain ID
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ *       404:
+ *         description: Chain not found
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ *       429:
+ *         description: Rate limit exceeded
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ *       500:
+ *         description: Internal server error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ */
+
 export interface ChainConfigRequest {
   chainId: number;
   name: string;

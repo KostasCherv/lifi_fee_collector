@@ -1,5 +1,6 @@
 import express from 'express';
 import helmet from 'helmet';
+import swaggerUi from 'swagger-ui-express';
 import config from '@/config';
 import { databaseService } from '@/services/database';
 import { scraperService } from '@/services/scraper';
@@ -7,6 +8,7 @@ import { corsMiddleware } from '@/middleware/cors';
 import { requestLogger } from '@/middleware/logging';
 import { errorHandler, notFoundHandler } from '@/middleware/errorHandler';
 import routes from '@/routes';
+import { specs } from '@/config/swagger';
 
 const app = express();
 
@@ -94,6 +96,19 @@ app.get('/health/scraper', async (_req, res) => {
     });
   }
 });
+
+// Swagger UI
+app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(specs, {
+  customCss: '.swagger-ui .topbar { display: none }',
+  customSiteTitle: 'Fee Collector API Documentation',
+  customfavIcon: '/favicon.ico',
+  swaggerOptions: {
+    docExpansion: 'list',
+    filter: true,
+    showRequestHeaders: true,
+    tryItOutEnabled: true,
+  },
+}));
 
 // Mount API routes
 app.use(routes);
