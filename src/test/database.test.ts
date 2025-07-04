@@ -1,5 +1,6 @@
 import { databaseService } from '../services/database';
 import { FeeCollectedEventModel, ScraperStateModel, ChainConfigurationModel } from '../models';
+import { closeRedis } from '../utils/redisClient';
 
 describe('Database Tests', () => {
   beforeAll(async () => {
@@ -8,6 +9,7 @@ describe('Database Tests', () => {
 
   afterAll(async () => {
     await databaseService.disconnect();
+    await closeRedis();
   });
 
   test('should connect to database', () => {

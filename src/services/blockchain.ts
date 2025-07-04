@@ -11,6 +11,7 @@ const FEE_COLLECTOR_ABI = [
 class BlockchainService {
   private providers: Map<number, ChainProvider> = new Map();
   private readonly healthCheckInterval = 60000; // 1 minute
+  private healthCheckTimer: NodeJS.Timeout | null = null;
 
   async initializeProviders(): Promise<void> {
     try {
@@ -165,7 +166,7 @@ class BlockchainService {
   }
 
   private startHealthMonitoring(): void {
-    setInterval(async () => {
+    this.healthCheckTimer = setInterval(async () => {
       for (const [chainId, provider] of this.providers) {
         try {
           await this.testProviderHealth(provider.provider, provider.contract);
@@ -201,7 +202,17 @@ class BlockchainService {
 
   async shutdown(): Promise<void> {
     logger.info('Shutting down blockchain service...');
+    
+    // Clear health monitoring interval
+    if (this.healthCheckTimer) {
+      clearInterval(this.healthCheckTimer);
+      this.healthCheckTimer = null;
+    }
+    
+    // Clear providers
     this.providers.clear();
+    
+    logger.info('Blockchain service shutdown complete');
   }
 }
 

@@ -40,7 +40,7 @@ export const errorHandler = (
   });
 
   // Don't leak error details in production
-  const isDevelopment = process.env['NODE_ENV'] === 'development';
+  const isDevelopment = process.env['NODE_ENV'] === 'development' || process.env['NODE_ENV'] === 'test';
   
   const errorResponse = {
     success: false,

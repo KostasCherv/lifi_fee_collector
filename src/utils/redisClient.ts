@@ -2,14 +2,31 @@ import Redis from 'ioredis';
 import config from '@/config';
 import { logger } from './logger';
 
-const redis = new Redis(config.redis.url);
+let redisInstance: Redis | null = null;
 
-redis.on('connect', () => {
-  logger.info('Connected to Redis');
-});
+const getRedis = (): Redis => {
+  if (!redisInstance) {
+    redisInstance = new Redis(config.redis.url);
+    
+    redisInstance.on('connect', () => {
+      logger.info('Connected to Redis');
+    });
 
-redis.on('error', (err) => {
-  logger.error('Redis error:', err);
-});
+    redisInstance.on('error', (err) => {
+      logger.error('Redis error:', err);
+    });
+  }
+  return redisInstance;
+};
 
-export default redis; 
+// Export a function to close the Redis connection
+export const closeRedis = async (): Promise<void> => {
+  if (redisInstance && redisInstance.status === 'ready') {
+    await redisInstance.quit();
+    redisInstance = null;
+    logger.info('Redis connection closed');
+  }
+};
+
+// Export the getter function instead of calling it immediately
+export default getRedis; 

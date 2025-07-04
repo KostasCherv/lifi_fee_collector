@@ -100,4 +100,3 @@ Thumbs.db
 # Test files
 *.test.js
 *.spec.js 
-.env.test

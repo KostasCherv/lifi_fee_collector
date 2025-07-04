@@ -1,6 +1,6 @@
 import { Request, Response, NextFunction } from 'express';
 import crypto from 'crypto';
-import redis from '@/utils/redisClient';
+import getRedis from '@/utils/redisClient';
 import config from '@/config';
 
 function generateCacheKey(req: Request): string {
@@ -20,9 +20,12 @@ export function redisCacheMiddleware(ttlSeconds: number = config.redis.cacheTtl)
 
     const key = generateCacheKey(req);
     try {
+      const redis = getRedis();
       const cached = await redis.get(key);
       if (cached) {
-        res.setHeader('X-Cache', 'HIT');
+        if (!res.headersSent) {
+          res.setHeader('X-Cache', 'HIT');
+        }
         return res.json(JSON.parse(cached));
       }
     } catch (err) {
@@ -36,8 +39,11 @@ export function redisCacheMiddleware(ttlSeconds: number = config.redis.cacheTtl)
     res.json = (body: any) => {
       (async () => {
         try {
+          const redis = getRedis();
           await redis.set(key, JSON.stringify(body), 'EX', ttlSeconds);
-          res.setHeader('X-Cache', 'MISS');
+          if (!res.headersSent) {
+            res.setHeader('X-Cache', 'MISS');
+          }
         } catch (err) {
           // eslint-disable-next-line no-console
           console.warn('Redis cache write error:', err);
@@ -52,6 +58,7 @@ export function redisCacheMiddleware(ttlSeconds: number = config.redis.cacheTtl)
 
 // Utility to clear all API cache (useful after POST/PUT/DELETE)
 export async function clearApiCache() {
+  const redis = getRedis();
   const keys = await redis.keys('api-cache:*');
   if (keys.length > 0) {
     await redis.del(keys);

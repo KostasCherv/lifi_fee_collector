@@ -1,6 +1,7 @@
 import { blockchainService } from '../services/blockchain';
 import { databaseService } from '../services/database';
 import { ChainConfigurationModel } from '../models';
+import { closeRedis } from '../utils/redisClient';
 
 describe('Blockchain Service Tests', () => {
   beforeAll(async () => {
@@ -30,6 +31,7 @@ describe('Blockchain Service Tests', () => {
     await blockchainService.shutdown();
     await ChainConfigurationModel.deleteMany({});
     await databaseService.disconnect();
+    await closeRedis();
   });
 
   test('should initialize providers', async () => {
@@ -38,13 +40,17 @@ describe('Blockchain Service Tests', () => {
     expect(providers.length).toBeGreaterThan(0);
   });
 
-  test('should get provider for chain', () => {
+  test('should get provider for chain', async () => {
+    // Make sure providers are initialized first
+    await blockchainService.initializeProviders();
     const provider = blockchainService.getProvider(137);
     expect(provider).toBeDefined();
     expect(provider?.chainId).toBe(137);
   });
 
   test('should get latest block number', async () => {
+    // Make sure providers are initialized first
+    await blockchainService.initializeProviders();
     const blockNumber = await blockchainService.getLatestBlockNumber(137);
     expect(blockNumber).toBeGreaterThan(0);
   });

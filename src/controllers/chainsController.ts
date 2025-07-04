@@ -54,6 +54,17 @@ export const chainConfigSchema = Joi.object({
   retryAttempts: Joi.number().integer().min(1).max(10).optional(),
 });
 
+// Validation schema for chain configuration updates (all fields optional)
+export const chainUpdateSchema = Joi.object({
+  name: Joi.string().min(1).max(50).optional(),
+  rpcUrl: Joi.string().uri().optional(),
+  contractAddress: Joi.string().pattern(/^0x[a-fA-F0-9]{40}$/).optional(),
+  startingBlock: Joi.number().integer().positive().optional(),
+  scanInterval: Joi.number().integer().min(5000).max(300000).optional(),
+  maxBlockRange: Joi.number().integer().min(100).max(10000).optional(),
+  retryAttempts: Joi.number().integer().min(1).max(10).optional(),
+});
+
 export const getChainsStatus = async (
   _req: Request,
   res: Response,
@@ -331,9 +342,8 @@ export const updateChain = async (
       throw new AppError('Chain configuration not found', 404);
     }
 
-    // Validate update data (excluding chainId which cannot be changed)
-    const updateSchema = chainConfigSchema.fork(['chainId'], (schema) => schema.optional());
-    const { error, value } = updateSchema.validate(updateData);
+    // Validate update data using the update schema
+    const { error, value } = chainUpdateSchema.validate(updateData);
     if (error) {
       throw new AppError(`Validation error: ${error.details.map(d => d.message).join(', ')}`, 400);
     }

@@ -3,14 +3,15 @@ import helmet from 'helmet';
 import config from '@/config';
 import { databaseService } from '@/services/database';
 import { scraperService } from '@/services/scraper';
-import { logger } from '@/utils/logger';
 import { corsMiddleware } from '@/middleware/cors';
 import { requestLogger } from '@/middleware/logging';
 import { errorHandler, notFoundHandler } from '@/middleware/errorHandler';
 import routes from '@/routes';
 
 const app = express();
-const port = config.app.port;
+
+// Export app for testing
+export { app };
 
 // Security middleware
 if (config.security.helmetEnabled) {
@@ -39,18 +40,33 @@ app.get('/', (_req, res) => {
 
 app.get('/health', async (_req, res) => {
   const isHealthy = databaseService.isConnectedToDatabase();
-  const scraperStatus = await scraperService.getStatus();
   
-  res.status(isHealthy ? 200 : 503).json({
-    status: isHealthy ? 'healthy' : 'unhealthy',
-    timestamp: new Date().toISOString(),
-    database: databaseService.getConnectionState(),
-    scraper: {
-      isRunning: scraperStatus.isRunning,
-      activeChains: scraperStatus.activeChains,
-      totalChains: scraperStatus.totalChains,
-    },
-  });
+  try {
+    const scraperStatus = await scraperService.getStatus();
+    
+    res.status(isHealthy ? 200 : 503).json({
+      status: isHealthy ? 'healthy' : 'unhealthy',
+      timestamp: new Date().toISOString(),
+      database: databaseService.getConnectionState(),
+      scraper: {
+        isRunning: scraperStatus.isRunning,
+        activeChains: scraperStatus.activeChains,
+        totalChains: scraperStatus.totalChains,
+      },
+    });
+  } catch (error) {
+    res.status(503).json({
+      status: 'unhealthy',
+      timestamp: new Date().toISOString(),
+      database: databaseService.getConnectionState(),
+      scraper: {
+        isRunning: false,
+        activeChains: 0,
+        totalChains: 0,
+        error: error instanceof Error ? error.message : 'Unknown error',
+      },
+    });
+  }
 });
 
 app.get('/health/database', (_req, res) => {
@@ -86,43 +102,4 @@ app.use(routes);
 app.use(notFoundHandler);
 
 // Error handling middleware (must be last)
-app.use(errorHandler);
-
-async function startServer() {
-  try {
-    // Connect to database
-    await databaseService.connect();
-    
-    // Start scraper service
-    await scraperService.start();
-    
-    // Start server
-    app.listen(port, () => {
-      logger.info(`🚀 Server running on port ${port} in ${config.app.nodeEnv} mode`);
-      logger.info(`📊 Health check available at http://localhost:${port}/health`);
-      logger.info(`🗄️  Database health check at http://localhost:${port}/health/database`);
-      logger.info(`🔍 Scraper health check at http://localhost:${port}/health/scraper`);
-    });
-    
-    // Graceful shutdown
-    process.on('SIGINT', async () => {
-      logger.info('Received SIGINT, shutting down gracefully...');
-      await scraperService.gracefulShutdown();
-      await databaseService.disconnect();
-      process.exit(0);
-    });
-    
-    process.on('SIGTERM', async () => {
-      logger.info('Received SIGTERM, shutting down gracefully...');
-      await scraperService.gracefulShutdown();
-      await databaseService.disconnect();
-      process.exit(0);
-    });
-    
-  } catch (error) {
-    logger.error('Failed to start server:', error);
-    process.exit(1);
-  }
-}
-
-startServer(); 
+app.use(errorHandler); 

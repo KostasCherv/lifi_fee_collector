@@ -7,6 +7,7 @@ import {
   updateChain,
   deleteChain,
   chainConfigSchema,
+  chainUpdateSchema,
 } from '@/controllers/chainsController';
 import { validateRequest, validateParams } from '@/middleware/validation';
 import { chainManagementRateLimiter } from '@/middleware/rateLimit';
@@ -51,7 +52,7 @@ router.put(
   '/:chainId/update',
   chainManagementRateLimiter,
   validateParams(chainIdParamSchema),
-  validateRequest(chainConfigSchema.fork(['chainId'], (schema) => schema.optional())),
+  validateRequest(chainUpdateSchema),
   updateChain
 );
 
