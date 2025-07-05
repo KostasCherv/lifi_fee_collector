@@ -9,6 +9,7 @@ import { requestLogger } from '@/middleware/logging';
 import { errorHandler, notFoundHandler } from '@/middleware/errorHandler';
 import routes from '@/routes';
 import { specs } from '@/config/swagger';
+import cors from 'cors';
 
 const app = express();
 
@@ -21,7 +22,11 @@ if (config.security.helmetEnabled) {
 }
 
 // CORS middleware
-app.use(corsMiddleware);
+if (process.env['NODE_ENV'] !== 'production') {
+  app.use(cors()); 
+} else {
+  app.use(corsMiddleware);
+}
 
 // Request logging middleware
 app.use(requestLogger);
@@ -45,6 +50,7 @@ app.get('/health', async (_req, res) => {
   
   try {
     const scraperStatus = await scraperService.getStatus();
+    
     
     res.status(isHealthy ? 200 : 503).json({
       status: isHealthy ? 'healthy' : 'unhealthy',

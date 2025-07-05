@@ -1,6 +1,6 @@
 import { logger } from '@/utils/logger';
 import { blockchainService } from '@/services/blockchain';
-import { FeeCollectedEventModel, ScraperStateModel } from '@/models';
+import { ChainConfigurationModel, FeeCollectedEventModel, ScraperStateModel } from '@/models';
 import { BlockchainEvent, EventProcessingResult, BlockRange } from '@/types/blockchain';
 import config from '@/config';
 
@@ -27,7 +27,7 @@ class EventProcessor {
       }
       
       // Parse events
-      const parsedEvents = blockchainService.parseFeeCollectorEvents(rawEvents, chainId);
+      const parsedEvents = await blockchainService.parseFeeCollectorEvents(rawEvents, chainId);
       
       // Store events in database
       const storedEvents = await this.storeEvents(parsedEvents);
@@ -141,11 +141,15 @@ class EventProcessor {
       
       // Get latest block number
       const latestBlock = await blockchainService.getLatestBlockNumber(chainId);
+
+      // Get the max block range from the chain configuration
+      const chainConfig = await ChainConfigurationModel.findOne({ chainId });
+      const maxBlockRange = chainConfig?.maxBlockRange || config.scraper.maxBlockRange;
       
       // Calculate next block range
       const fromBlock = lastProcessedBlock + 1;
       const toBlock = Math.min(
-        fromBlock + config.scraper.maxBlockRange - 1,
+        fromBlock +  maxBlockRange - 1,
         latestBlock
       );
       

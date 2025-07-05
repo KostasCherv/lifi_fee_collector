@@ -63,7 +63,7 @@ class ScraperService {
 
   async startChain(chainId: number): Promise<void> {
     try {
-      const chainConfig = await ChainConfigurationModel.findOne({ chainId, isEnabled: true });
+      const chainConfig = await ChainConfigurationModel.findOne({ chainId });
       if (!chainConfig) {
         throw new Error(`Chain ${chainId} not found or not enabled`);
       }
@@ -84,6 +84,9 @@ class ScraperService {
           lastWorkerStart: new Date(),
         }
       );
+
+      // Update blockchain provider
+      await blockchainService.addProvider(chainId, chainConfig.rpcUrl, chainConfig.contractAddress);
 
       // Process initial block range
       await this.processChain(chainId);
@@ -228,7 +231,7 @@ class ScraperService {
       errorCount: number;
     }>;
   }> {
-    const chainConfigs = await ChainConfigurationModel.find({ isEnabled: true });
+    const chainConfigs = await ChainConfigurationModel.find();
     const activeChains = this.intervals.size;
     
     const chainStatuses = await Promise.all(
@@ -243,7 +246,7 @@ class ScraperService {
         };
       })
     );
-    
+
     return {
       isRunning: this.isRunning,
       activeChains,
@@ -268,6 +271,16 @@ class ScraperService {
       // Force shutdown
       process.exit(1);
     }
+  }
+
+  async updateChainInterval(chainId: number, scanInterval: number): Promise<void> {
+    const interval = this.intervals.get(chainId);
+    if (interval) {
+      clearInterval(interval);
+    }
+    this.intervals.set(chainId, setInterval(async () => {
+      await this.processChain(chainId);
+    }, scanInterval));
   }
 }
 

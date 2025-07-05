@@ -37,6 +37,7 @@ class BlockchainService {
 
   async addProvider(chainId: number, rpcUrl: string, contractAddress: string): Promise<void> {
     try {
+
       logger.info(`Adding provider for chain ${chainId} with RPC: ${rpcUrl}`);
       
       // Create provider
@@ -126,8 +127,8 @@ class BlockchainService {
     }
   }
 
-  parseFeeCollectorEvents(events: ethers.Event[], chainId: number): BlockchainEvent[] {
-    return events.map(event => {
+  async parseFeeCollectorEvents(events: ethers.Event[], chainId: number): Promise<BlockchainEvent[]> {
+    return await Promise.all(events.map(async event => {
       // Parse the event using the contract interface
       const provider = this.providers.get(chainId);
       if (!provider) {
@@ -146,9 +147,9 @@ class BlockchainService {
         integrator: parsedEvent.args[1],
         integratorFee: parsedEvent.args[2].toString(),
         lifiFee: parsedEvent.args[3].toString(),
-        timestamp: new Date(), // We'll get this from block data later
+        timestamp: new Date(), // TODO: get the timestamp from the block (this operation is very slow and hits the rate limit of the provider)
       };
-    });
+    }));
   }
 
   private async testProviderHealth(provider: any, contract: any): Promise<void> {

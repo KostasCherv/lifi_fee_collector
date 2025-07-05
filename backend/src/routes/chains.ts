@@ -2,12 +2,13 @@ import { Router } from 'express';
 import {
   getChainsStatus,
   getChainStatus,
-  startChain,
+  addChain,
   stopChain,
   updateChain,
   deleteChain,
   chainConfigSchema,
   chainUpdateSchema,
+  startChain,
 } from '@/controllers/chainsController';
 import { validateRequest, validateParams } from '@/middleware/validation';
 import { chainManagementRateLimiter } from '@/middleware/rateLimit';
@@ -35,9 +36,16 @@ router.get(
 );
 
 router.post(
-  '/start',
+  '/',
   chainManagementRateLimiter,
   validateRequest(chainConfigSchema),
+  addChain
+);
+
+router.put(
+  '/:chainId/start',
+  chainManagementRateLimiter,
+  validateParams(chainIdParamSchema),
   startChain
 );
 

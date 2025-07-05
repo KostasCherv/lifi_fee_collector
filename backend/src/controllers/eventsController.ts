@@ -163,7 +163,7 @@ export const getEventsByIntegrator = async (
     }
 
     // Build query
-    const query: any = { integrator: integrator.toLowerCase() };
+    const query: any = { integrator };
     
     if (chainId) {
       query.chainId = parseInt(chainId, 10);
@@ -398,7 +398,7 @@ export const getEventsWithFilters = async (
       if (!/^0x[a-fA-F0-9]{40}$/.test(integrator)) {
         throw new AppError('Invalid integrator address', 400);
       }
-      query.integrator = integrator.toLowerCase();
+      query.integrator = integrator
     }
 
     if (fromDate || toDate) {

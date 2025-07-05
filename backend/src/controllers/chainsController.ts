@@ -151,10 +151,10 @@ import { clearApiCache } from '@/middleware/cache';
  *             schema:
  *               $ref: '#/components/schemas/Error'
  * 
- * /api/v1/chains/start:
+ * /api/v1/chains:
  *   post:
- *     summary: Start a new chain worker
- *     description: Create a new chain configuration and start the event scraper worker
+ *     summary: Add and start a new chain worker
+ *     description: Add a new chain configuration and start the event scraper worker for it.
  *     tags: [Chains]
  *     requestBody:
  *       required: true
@@ -175,18 +175,16 @@ import { clearApiCache } from '@/middleware/cache';
  *               name:
  *                 type: string
  *                 description: Human-readable chain name
- *                 example: 'Polygon'
- *                 minLength: 1
- *                 maxLength: 50
+ *                 example: Polygon
  *               rpcUrl:
  *                 type: string
  *                 description: RPC endpoint URL
- *                 example: 'https://polygon-rpc.com'
+ *                 example: https://polygon-rpc.com
  *               contractAddress:
  *                 type: string
  *                 description: FeeCollector contract address
  *                 pattern: '^0x[a-fA-F0-9]{40}$'
- *                 example: '0xbD6C7B0d2f68c2b7805d88388319cfB6EcB50eA9'
+ *                 example: 0xbD6C7B0d2f68c2b7805d88388319cfB6EcB50eA9
  *               startingBlock:
  *                 type: integer
  *                 description: Starting block for event scanning
@@ -211,13 +209,59 @@ import { clearApiCache } from '@/middleware/cache';
  *                 maximum: 10
  *           example:
  *             chainId: 137
- *             name: 'Polygon'
- *             rpcUrl: 'https://polygon-rpc.com'
- *             contractAddress: '0xbD6C7B0d2f68c2b7805d88388319cfB6EcB50eA9'
+ *             name: Polygon
+ *             rpcUrl: https://polygon-rpc.com
+ *             contractAddress: 0xbD6C7B0d2f68c2b7805d88388319cfB6EcB50eA9
  *             startingBlock: 70000000
  *             scanInterval: 30000
  *             maxBlockRange: 1000
  *             retryAttempts: 3
+ *     responses:
+ *       201:
+ *         description: Chain worker started successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 message:
+ *                   type: string
+ *                   example: Chain worker started successfully
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     chainId:
+ *                       type: integer
+ *                       example: 137
+ *                     workerStatus:
+ *                       type: string
+ *                       example: running
+ *                     lastWorkerStart:
+ *                       type: string
+ *                       format: date-time
+ *       400:
+ *         description: Invalid input
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ *       409:
+ *         description: Chain already exists
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ * 
+ * /api/v1/chains/{chainId}/start:
+ *   put:
+ *     summary: Start a chain worker
+ *     description: Start the event scraper worker for a specific chain.
+ *     tags: [Chains]
+ *     parameters:
+ *       - $ref: '#/components/parameters/chainIdParam'
  *     responses:
  *       200:
  *         description: Chain worker started successfully
@@ -231,7 +275,7 @@ import { clearApiCache } from '@/middleware/cache';
  *                   example: true
  *                 message:
  *                   type: string
- *                   example: 'Chain worker started successfully'
+ *                   example: Chain worker started successfully
  *                 data:
  *                   type: object
  *                   properties:
@@ -240,35 +284,12 @@ import { clearApiCache } from '@/middleware/cache';
  *                       example: 137
  *                     workerStatus:
  *                       type: string
- *                       example: 'running'
+ *                       example: running
  *                     lastWorkerStart:
  *                       type: string
  *                       format: date-time
- *                       example: '2024-01-15T10:30:00Z'
- *                 timestamp:
- *                   type: string
- *                   format: date-time
- *                   example: '2024-01-15T10:30:00Z'
- *       400:
- *         description: Invalid configuration or validation error
- *         content:
- *           application/json:
- *             schema:
- *               $ref: '#/components/schemas/Error'
- *       409:
- *         description: Chain ID already exists
- *         content:
- *           application/json:
- *             schema:
- *               $ref: '#/components/schemas/Error'
- *       429:
- *         description: Rate limit exceeded
- *         content:
- *           application/json:
- *             schema:
- *               $ref: '#/components/schemas/Error'
- *       500:
- *         description: Internal server error
+ *       404:
+ *         description: Chain not found
  *         content:
  *           application/json:
  *             schema:
@@ -277,7 +298,7 @@ import { clearApiCache } from '@/middleware/cache';
  * /api/v1/chains/{chainId}/stop:
  *   put:
  *     summary: Stop a chain worker
- *     description: Stop the event scraper worker for a specific chain
+ *     description: Stop the event scraper worker for a specific chain.
  *     tags: [Chains]
  *     parameters:
  *       - $ref: '#/components/parameters/chainIdParam'
@@ -294,7 +315,7 @@ import { clearApiCache } from '@/middleware/cache';
  *                   example: true
  *                 message:
  *                   type: string
- *                   example: 'Chain worker stopped successfully'
+ *                   example: Chain worker stopped successfully
  *                 data:
  *                   type: object
  *                   properties:
@@ -303,17 +324,7 @@ import { clearApiCache } from '@/middleware/cache';
  *                       example: 137
  *                     workerStatus:
  *                       type: string
- *                       example: 'stopped'
- *                 timestamp:
- *                   type: string
- *                   format: date-time
- *                   example: '2024-01-15T10:30:00Z'
- *       400:
- *         description: Invalid chain ID
- *         content:
- *           application/json:
- *             schema:
- *               $ref: '#/components/schemas/Error'
+ *                       example: stopped
  *       404:
  *         description: Chain not found
  *         content:
@@ -336,7 +347,7 @@ import { clearApiCache } from '@/middleware/cache';
  * /api/v1/chains/{chainId}/update:
  *   put:
  *     summary: Update chain configuration
- *     description: Update the configuration for an existing chain
+ *     description: Update the configuration for a specific chain.
  *     tags: [Chains]
  *     parameters:
  *       - $ref: '#/components/parameters/chainIdParam'
@@ -345,49 +356,7 @@ import { clearApiCache } from '@/middleware/cache';
  *       content:
  *         application/json:
  *           schema:
- *             type: object
- *             properties:
- *               name:
- *                 type: string
- *                 description: Human-readable chain name
- *                 example: 'Updated Polygon'
- *                 minLength: 1
- *                 maxLength: 50
- *               rpcUrl:
- *                 type: string
- *                 description: RPC endpoint URL
- *                 example: 'https://new-polygon-rpc.com'
- *               contractAddress:
- *                 type: string
- *                 description: FeeCollector contract address
- *                 pattern: '^0x[a-fA-F0-9]{40}$'
- *                 example: '0xbD6C7B0d2f68c2b7805d88388319cfB6EcB50eA9'
- *               startingBlock:
- *                 type: integer
- *                 description: Starting block for event scanning
- *                 example: 70000000
- *               scanInterval:
- *                 type: integer
- *                 description: Scan interval in milliseconds (5000-300000)
- *                 example: 30000
- *                 minimum: 5000
- *                 maximum: 300000
- *               maxBlockRange:
- *                 type: integer
- *                 description: Maximum blocks to scan per iteration (100-10000)
- *                 example: 1000
- *                 minimum: 100
- *                 maximum: 10000
- *               retryAttempts:
- *                 type: integer
- *                 description: Number of retry attempts for failed operations (1-10)
- *                 example: 3
- *                 minimum: 1
- *                 maximum: 10
- *           example:
- *             name: 'Updated Polygon'
- *             scanInterval: 60000
- *             maxBlockRange: 2000
+ *             $ref: '#/components/schemas/ChainConfiguration'
  *     responses:
  *       200:
  *         description: Chain configuration updated successfully
@@ -401,24 +370,21 @@ import { clearApiCache } from '@/middleware/cache';
  *                   example: true
  *                 message:
  *                   type: string
- *                   example: 'Chain configuration updated successfully'
+ *                   example: Chain configuration updated successfully
  *                 data:
  *                   type: object
  *                   properties:
  *                     chainId:
  *                       type: integer
  *                       example: 137
- *                     updatedFields:
- *                       type: array
- *                       items:
- *                         type: string
- *                       example: ['name', 'scanInterval', 'maxBlockRange']
- *                 timestamp:
- *                   type: string
- *                   format: date-time
- *                   example: '2024-01-15T10:30:00Z'
+ *                     name:
+ *                       type: string
+ *                       example: Polygon
+ *                     workerStatus:
+ *                       type: string
+ *                       example: running
  *       400:
- *         description: Invalid parameters or validation error
+ *         description: Invalid input
  *         content:
  *           application/json:
  *             schema:
@@ -429,29 +395,17 @@ import { clearApiCache } from '@/middleware/cache';
  *           application/json:
  *             schema:
  *               $ref: '#/components/schemas/Error'
- *       429:
- *         description: Rate limit exceeded
- *         content:
- *           application/json:
- *             schema:
- *               $ref: '#/components/schemas/Error'
- *       500:
- *         description: Internal server error
- *         content:
- *           application/json:
- *             schema:
- *               $ref: '#/components/schemas/Error'
  * 
  * /api/v1/chains/{chainId}:
  *   delete:
- *     summary: Delete chain configuration
- *     description: Remove a chain configuration and stop its worker
+ *     summary: Delete a chain configuration
+ *     description: Delete a chain configuration and its scraper state.
  *     tags: [Chains]
  *     parameters:
  *       - $ref: '#/components/parameters/chainIdParam'
  *     responses:
  *       200:
- *         description: Chain configuration deleted successfully
+ *         description: Chain configuration deleted successfullyworkerStatus
  *         content:
  *           application/json:
  *             schema:
@@ -462,43 +416,18 @@ import { clearApiCache } from '@/middleware/cache';
  *                   example: true
  *                 message:
  *                   type: string
- *                   example: 'Chain configuration deleted successfully'
+ *                   example: Chain configuration deleted successfully
  *                 data:
  *                   type: object
  *                   properties:
  *                     chainId:
  *                       type: integer
  *                       example: 137
- *                     deletedConfiguration:
- *                       type: boolean
- *                       example: true
- *                     deletedScraperState:
- *                       type: boolean
- *                       example: true
- *                 timestamp:
- *                   type: string
- *                   format: date-time
- *                   example: '2024-01-15T10:30:00Z'
- *       400:
- *         description: Invalid chain ID
- *         content:
- *           application/json:
- *             schema:
- *               $ref: '#/components/schemas/Error'
+ *                     name:
+ *                       type: string
+ *                       example: Polygon
  *       404:
  *         description: Chain not found
- *         content:
- *           application/json:
- *             schema:
- *               $ref: '#/components/schemas/Error'
- *       429:
- *         description: Rate limit exceeded
- *         content:
- *           application/json:
- *             schema:
- *               $ref: '#/components/schemas/Error'
- *       500:
- *         description: Internal server error
  *         content:
  *           application/json:
  *             schema:
@@ -683,7 +612,7 @@ export const getChainStatus = async (
   }
 };
 
-export const startChain = async (
+export const addChain = async (
   req: Request,
   res: Response,
   next: NextFunction
@@ -720,6 +649,9 @@ export const startChain = async (
 
     await newChainConfig.save();
 
+    // Update blockchain provider
+    await blockchainService.addProvider(value.chainId, value.rpcUrl, value.contractAddress);
+
     // Initialize scraper state
     const scraperState = new ScraperStateModel({
       chainId: value.chainId,
@@ -748,6 +680,60 @@ export const startChain = async (
         chainId: value.chainId,
         workerStatus: 'running',
         lastWorkerStart: newChainConfig.lastWorkerStart?.toISOString(),
+      },
+      timestamp: new Date().toISOString(),
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const startChain = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
+  try {
+    const { chainId } = req.params;
+
+    if (!chainId) {
+      throw new AppError('Chain ID is required', 400);
+    }
+
+    const chainIdNum = parseInt(chainId, 10);
+    if (isNaN(chainIdNum)) {
+      throw new AppError('Invalid chain ID', 400);
+    }
+
+    // Check if chain exists
+    const chainConfig = await ChainConfigurationModel.findOne({ chainId: chainIdNum });
+    if (!chainConfig) {
+      throw new AppError('Chain configuration not found', 404);
+    }
+
+    // Start the chain worker
+    await scraperService.startChain(chainIdNum);
+
+    // Update configuration
+    chainConfig.workerStatus = 'running';
+    chainConfig.isEnabled = true;
+    chainConfig.lastWorkerStart = new Date();
+    await chainConfig.save();
+
+    logger.info('Chain started successfully', {
+      chainId: chainIdNum,
+      name: chainConfig.name,
+    });
+
+    await clearApiCache();
+
+    res.json({
+      success: true,
+      message: 'Chain worker started successfully',
+      data: {
+        chainId: chainIdNum,
+        workerStatus: 'running',
+        lastWorkerStart: chainConfig.lastWorkerStart?.toISOString(),
       },
       timestamp: new Date().toISOString(),
     });
@@ -862,6 +848,12 @@ export const updateChain = async (
       chainId: chainIdNum,
       updatedFields: Object.keys(value),
     });
+
+    // Update blockchain provider
+    await blockchainService.addProvider(chainIdNum, value.rpcUrl, value.contractAddress);
+
+    // Update the interval of the scraper
+    await scraperService.updateChainInterval(chainIdNum, value.scanInterval);
 
     await clearApiCache();
 

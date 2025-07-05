@@ -18,13 +18,6 @@ export const logger = winston.createLogger({
   format: logFormat,
   defaultMeta: { service: 'fee-collector-scraper' },
   transports: [
-    // Console transport
-    new winston.transports.Console({
-      format: winston.format.combine(
-        winston.format.colorize(),
-        winston.format.simple()
-      ),
-    }),
     // File transport for errors
     new winston.transports.File({
       filename: path.join(logsDir, 'error.log'),
