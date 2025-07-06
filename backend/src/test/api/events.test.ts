@@ -71,6 +71,7 @@ describe('Event Query API Endpoints', () => {
     ];
 
     await FeeCollectedEventModel.insertMany(testEvents);
+    jest.clearAllMocks();
   });
 
   afterAll(async () => {

@@ -1,3 +1,5 @@
+import '@jest/globals';
+
 // Mock ethers.js to avoid real network calls
 jest.mock('ethers', () => {
   const mockProvider = {
@@ -63,8 +65,9 @@ describe('Blockchain Service Tests', () => {
     await closeRedis();
   });
 
-  beforeEach(async () => {
-    // Clear providers before each test
+  beforeEach(() => {
+    jest.clearAllMocks();
+    // Clear providers to ensure test isolation
     blockchainService['providers'].clear();
   });
 

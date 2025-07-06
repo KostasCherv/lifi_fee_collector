@@ -21,10 +21,10 @@ const mockChainConfig = {
 
 describe('scraperService', () => {
   beforeEach(() => {
+    jest.clearAllMocks();
     // Clear all intervals and state
     scraperService['isRunning'] = false;
     scraperService['intervals'].clear();
-    jest.clearAllMocks();
   });
 
   describe('start/stop', () => {

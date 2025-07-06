@@ -55,6 +55,7 @@ describe('Chain Management API Endpoints', () => {
     // Clear test data before each test
     await ChainConfigurationModel.deleteMany({});
     await ScraperStateModel.deleteMany({});
+    jest.clearAllMocks();
   });
 
   afterAll(async () => {
