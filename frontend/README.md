@@ -1,4 +1,6 @@
-# React + TypeScript + Vite
+# LI.FI Fee Collector Frontend
+
+A modern React frontend for the LI.FI Fee Collector Event Scraper system. This application provides a beautiful and responsive user interface for monitoring LI.FI FeeCollector smart contract events across multiple EVM chains, managing chain configurations, and visualizing collected data.
 
 This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
 

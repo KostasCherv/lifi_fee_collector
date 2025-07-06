@@ -1,6 +1,6 @@
-# Fee Collector Event Scraper
+# LI.FI Fee Collector Event Scraper
 
-A comprehensive multi-chain event scraper system that monitors FeeCollector smart contract events across multiple EVM chains, stores them in MongoDB, and provides a REST API for querying and managing the data.
+A comprehensive multi-chain event scraper system that monitors LI.FI FeeCollector smart contract events across multiple EVM chains, stores them in MongoDB, and provides a REST API for querying and managing the data.
 
 ## 🚀 Features
 
@@ -399,4 +399,4 @@ This project is licensed under the MIT License.
 
 ---
 
-**Built with ❤️ using TypeScript, Node.js, MongoDB, and Redis** 
+**Built with ❤️ using TypeScript, Node.js, MongoDB, and Redis**
