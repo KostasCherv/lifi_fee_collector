@@ -8,6 +8,7 @@ import { ChainConfigurationModel, ScraperStateModel } from '@/models';
 class ScraperService {
   private isRunning = false;
   private intervals: Map<number, NodeJS.Timeout> = new Map();
+  private processingChains: Set<number> = new Set(); // Track which chains are currently processing
   private readonly shutdownTimeout = 30000; // 30 seconds
 
   async start(): Promise<void> {
@@ -150,6 +151,15 @@ class ScraperService {
   }
 
   private async processChain(chainId: number): Promise<void> {
+    // Check if chain is already being processed
+    if (this.processingChains.has(chainId)) {
+      logger.debug(`Chain ${chainId} is already being processed, skipping this iteration`);
+      return;
+    }
+
+    // Mark chain as processing
+    this.processingChains.add(chainId);
+    
     try {
       // Calculate next block range to process
       const blockRange = await eventProcessor.calculateBlockRange(chainId);
@@ -176,6 +186,9 @@ class ScraperService {
       logger.error(`Error processing chain ${chainId}:`, error);
       await this.handleChainError(chainId, error);
       throw error;
+    } finally {
+      // Always remove from processing set, even if there was an error
+      this.processingChains.delete(chainId);
     }
   }
 
