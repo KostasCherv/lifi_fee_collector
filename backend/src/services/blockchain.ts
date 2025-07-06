@@ -93,13 +93,25 @@ class BlockchainService {
     if (!provider) {
       throw new Error(`No provider found for chain ${chainId}`);
     }
-    
-    try {
-      return await provider.provider.getBlockNumber();
-    } catch (error) {
-      logger.error(`Failed to get latest block for chain ${chainId}:`, error);
-      throw error;
+
+    // Fetch retryAttempts from ChainConfiguration
+    const chainConfig = await ChainConfigurationModel.findOne({ chainId });
+    const retryAttempts = chainConfig?.retryAttempts || 3;
+    let lastError: any = null;
+    for (let attempt = 1; attempt <= retryAttempts; attempt++) {
+      try {
+        return await provider.provider.getBlockNumber();
+      } catch (error) {
+        lastError = error;
+        logger.error(`Failed to get latest block for chain ${chainId} (attempt ${attempt}/${retryAttempts}):`, error);
+        if (attempt < retryAttempts) {
+          // Wait 1 second before retrying
+          await new Promise(res => setTimeout(res, 1000));
+        }
+      }
     }
+    logger.error(`All ${retryAttempts} attempts failed to get latest block for chain ${chainId}`);
+    throw lastError;
   }
 
   async loadFeeCollectorEvents(
@@ -112,42 +124,67 @@ class BlockchainService {
       throw new Error(`No provider found for chain ${chainId}`);
     }
 
-    try {
-      logger.info(`Loading events for chain ${chainId} from block ${fromBlock} to ${toBlock}`);
-      
-      const filter = provider.contract.filters.FeesCollected();
-      const events = await provider.contract.queryFilter(filter, fromBlock, toBlock);
-      
-      logger.info(`Found ${events.length} events for chain ${chainId}`);
-      return events;
-      
-    } catch (error) {
-      logger.error(`Failed to load events for chain ${chainId}:`, error);
-      throw error;
+    // Fetch retryAttempts from ChainConfiguration
+    const chainConfig = await ChainConfigurationModel.findOne({ chainId });
+    const retryAttempts = chainConfig?.retryAttempts || 3;
+    let lastError: any = null;
+    for (let attempt = 1; attempt <= retryAttempts; attempt++) {
+      try {
+        logger.info(`Loading events for chain ${chainId} from block ${fromBlock} to ${toBlock} (attempt ${attempt}/${retryAttempts})`);
+        const filter = provider.contract.filters.FeesCollected();
+        const events = await provider.contract.queryFilter(filter, fromBlock, toBlock);
+        logger.info(`Found ${events.length} events for chain ${chainId}`);
+        return events;
+      } catch (error) {
+        lastError = error;
+        logger.error(`Failed to load events for chain ${chainId} (attempt ${attempt}/${retryAttempts}):`, error);
+        if (attempt < retryAttempts) {
+          // Wait 1 second before retrying
+          await new Promise(res => setTimeout(res, 1000));
+        }
+      }
     }
+    logger.error(`All ${retryAttempts} attempts failed to load events for chain ${chainId}`);
+    throw lastError;
   }
 
   async parseFeeCollectorEvents(events: ethers.Event[], chainId: number): Promise<BlockchainEvent[]> {
-    return await Promise.all(events.map(async event => {
-      // Parse the event using the contract interface
-      const provider = this.providers.get(chainId);
-      if (!provider) {
-        throw new Error(`No provider found for chain ${chainId}`);
+    const provider = this.providers.get(chainId);
+    if (!provider) {
+      throw new Error(`No provider found for chain ${chainId}`);
+    }
+
+    // Group events by block number to minimize RPC calls
+    const eventsByBlock = new Map<number, ethers.Event[]>();
+    for (const event of events) {
+      const blockNumber = event.blockNumber;
+      if (blockNumber && !eventsByBlock.has(blockNumber)) {
+        eventsByBlock.set(blockNumber, []);
       }
-      
+      if (blockNumber) {
+        eventsByBlock.get(blockNumber)!.push(event);
+      }
+    }
+
+    // Fetch block timestamps efficiently with parallel processing and rate limiting
+    const blockTimestamps = await this.fetchBlockTimestamps(provider.provider, Array.from(eventsByBlock.keys()), chainId);
+
+    return await Promise.all(events.map(async event => {
       const parsedEvent = provider.contract.interface.parseLog(event);
+      const blockNumber = event.blockNumber;
+      const blockTimestamp = blockNumber ? blockTimestamps.get(blockNumber) || Math.floor(Date.now() / 1000) : Math.floor(Date.now() / 1000);
       
       return {
         chainId,
-        blockNumber: event.blockNumber,
-        blockHash: event.blockHash,
-        transactionHash: event.transactionHash,
-        logIndex: event.logIndex,
+        blockNumber: blockNumber || 0,
+        blockHash: event.blockHash || '',
+        transactionHash: event.transactionHash || '',
+        logIndex: event.logIndex || 0,
         token: parsedEvent.args[0],
         integrator: parsedEvent.args[1],
         integratorFee: parsedEvent.args[2].toString(),
         lifiFee: parsedEvent.args[3].toString(),
-        timestamp: new Date(), // TODO: get the timestamp from the block (this operation is very slow and hits the rate limit of the provider)
+        timestamp: new Date(blockTimestamp * 1000), // Convert Unix timestamp to Date
       };
     }));
   }
@@ -182,6 +219,64 @@ class BlockchainService {
         }
       }
     }, this.healthCheckInterval);
+  }
+
+
+
+  private async fetchBlockTimestamps(
+    provider: any, 
+    blockNumbers: number[], 
+    chainId: number,
+    batchSize: number = 5,
+    delayBetweenBatches: number = 200
+  ): Promise<Map<number, number>> {
+    const blockTimestamps = new Map<number, number>();
+    
+    if (blockNumbers.length === 0) {
+      return blockTimestamps;
+    }
+
+    logger.info(`Fetching timestamps for ${blockNumbers.length} unique blocks for chain ${chainId} (batch size: ${batchSize})`);
+
+    // Process blocks in batches to avoid overwhelming the RPC
+    for (let i = 0; i < blockNumbers.length; i += batchSize) {
+      const batch = blockNumbers.slice(i, i + batchSize);
+      const batchNumber = Math.floor(i / batchSize) + 1;
+      const totalBatches = Math.ceil(blockNumbers.length / batchSize);
+      
+      logger.info(`Processing batch ${batchNumber}/${totalBatches} (${batch.length} blocks) for chain ${chainId}`);
+      
+      // Fetch all blocks in current batch in parallel
+      const batchPromises = batch.map(async (blockNumber) => {
+        try {
+          const block = await provider.getBlock(blockNumber);
+          if (block && block.timestamp) {
+            return { blockNumber, timestamp: block.timestamp };
+          } else {
+            logger.warn(`Block ${blockNumber} on chain ${chainId} has no timestamp, using current time`);
+            return { blockNumber, timestamp: Math.floor(Date.now() / 1000) };
+          }
+        } catch (error) {
+          logger.warn(`Failed to fetch block ${blockNumber} on chain ${chainId}:`, error);
+          return { blockNumber, timestamp: Math.floor(Date.now() / 1000) };
+        }
+      });
+
+      const batchResults = await Promise.all(batchPromises);
+      
+      // Store results
+      for (const { blockNumber, timestamp } of batchResults) {
+        blockTimestamps.set(blockNumber, timestamp);
+      }
+
+      // Add delay between batches to respect rate limits (except for the last batch)
+      if (i + batchSize < blockNumbers.length) {
+        await new Promise(resolve => setTimeout(resolve, delayBetweenBatches));
+      }
+    }
+
+    logger.info(`✅ Completed fetching timestamps for ${blockNumbers.length} blocks for chain ${chainId}`);
+    return blockTimestamps;
   }
 
   async validateProvider(rpcUrl: string): Promise<void> {
