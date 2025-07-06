@@ -849,11 +849,17 @@ export const updateChain = async (
       updatedFields: Object.keys(value),
     });
 
-    // Update blockchain provider
-    await blockchainService.addProvider(chainIdNum, value.rpcUrl, value.contractAddress);
+    // Update blockchain provider if RPC URL or contract address changed
+    if (value.rpcUrl || value.contractAddress) {
+      const rpcUrl = value.rpcUrl || chainConfig.rpcUrl;
+      const contractAddress = value.contractAddress || chainConfig.contractAddress;
+      await blockchainService.addProvider(chainIdNum, rpcUrl, contractAddress);
+    }
 
-    // Update the interval of the scraper
-    await scraperService.updateChainInterval(chainIdNum, value.scanInterval);
+    // Update the interval of the scraper if scanInterval changed
+    if (value.scanInterval) {
+      await scraperService.updateChainInterval(chainIdNum, value.scanInterval);
+    }
 
     await clearApiCache();
 
