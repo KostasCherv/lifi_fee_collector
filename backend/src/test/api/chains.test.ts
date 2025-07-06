@@ -11,6 +11,7 @@ import { closeRedis } from '../../utils/redisClient';
 jest.mock('../../services/blockchain', () => ({
   blockchainService: {
     validateProvider: jest.fn().mockResolvedValue(undefined),
+    addProvider: jest.fn().mockResolvedValue(undefined),
   },
 }));
 
@@ -18,6 +19,7 @@ jest.mock('../../services/scraper', () => ({
   scraperService: {
     startChain: jest.fn().mockResolvedValue(undefined),
     stopChain: jest.fn().mockResolvedValue(undefined),
+    updateChainInterval: jest.fn().mockResolvedValue(undefined),
   },
 }));
 
@@ -59,6 +61,7 @@ describe('Chain Management API Endpoints', () => {
     // Clean up test data
     await ChainConfigurationModel.deleteMany({});
     await ScraperStateModel.deleteMany({});
+    await databaseService.disconnect();
     await closeRedis();
   });
 
@@ -127,10 +130,10 @@ describe('Chain Management API Endpoints', () => {
     });
   });
 
-  describe('POST /api/v1/chains/start', () => {
+  describe('POST /api/v1/chains', () => {
     it('should start a new chain successfully', async () => {
       const response = await request(app)
-        .post('/api/v1/chains/start')
+        .post('/api/v1/chains')
         .send(testChainConfig)
         .expect(201);
 
@@ -156,7 +159,7 @@ describe('Chain Management API Endpoints', () => {
       await ChainConfigurationModel.create(testChainConfig);
 
       const response = await request(app)
-        .post('/api/v1/chains/start')
+        .post('/api/v1/chains')
         .send(testChainConfig)
         .expect(409);
 
@@ -171,7 +174,7 @@ describe('Chain Management API Endpoints', () => {
       };
 
       const response = await request(app)
-        .post('/api/v1/chains/start')
+        .post('/api/v1/chains')
         .send(invalidConfig)
         .expect(400);
 
@@ -186,7 +189,7 @@ describe('Chain Management API Endpoints', () => {
       };
 
       const response = await request(app)
-        .post('/api/v1/chains/start')
+        .post('/api/v1/chains')
         .send(invalidConfig)
         .expect(400);
 
@@ -201,7 +204,7 @@ describe('Chain Management API Endpoints', () => {
       };
 
       const response = await request(app)
-        .post('/api/v1/chains/start')
+        .post('/api/v1/chains')
         .send(invalidConfig)
         .expect(400);
 
@@ -216,7 +219,7 @@ describe('Chain Management API Endpoints', () => {
       );
 
       const response = await request(app)
-        .post('/api/v1/chains/start')
+        .post('/api/v1/chains')
         .send(testChainConfig)
         .expect(400);
 

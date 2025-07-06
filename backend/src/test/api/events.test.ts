@@ -76,6 +76,7 @@ describe('Event Query API Endpoints', () => {
   afterAll(async () => {
     // Clean up test data
     await FeeCollectedEventModel.deleteMany({});
+    await databaseService.disconnect();
     await closeRedis();
   });
 

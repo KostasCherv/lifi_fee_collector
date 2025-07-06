@@ -1,3 +1,31 @@
+// Mock ethers.js to avoid real network calls
+jest.mock('ethers', () => {
+  const mockProvider = {
+    getBlockNumber: jest.fn().mockResolvedValue(70000001),
+  };
+  
+  const mockContract = {
+    filters: {
+      FeesCollected: jest.fn().mockReturnValue({}),
+    },
+    interface: {
+      parseLog: jest.fn().mockReturnValue({
+        args: ['0xToken', '0xIntegrator', '1000000000000000000', '500000000000000000'],
+      }),
+    },
+    queryFilter: jest.fn().mockResolvedValue([]),
+  };
+
+  return {
+    ethers: {
+      providers: {
+        JsonRpcProvider: jest.fn().mockImplementation(() => mockProvider),
+      },
+      Contract: jest.fn().mockImplementation(() => mockContract),
+    }
+  };
+});
+
 import { blockchainService } from '../services/blockchain';
 import { databaseService } from '../services/database';
 import { ChainConfigurationModel } from '../models';
@@ -35,6 +63,7 @@ describe('Blockchain Service Tests', () => {
   });
 
   test('should initialize providers', async () => {
+    // Initialize providers without starting health monitoring
     await blockchainService.initializeProviders();
     const providers = blockchainService.getAllProviders();
     expect(providers.length).toBeGreaterThan(0);
