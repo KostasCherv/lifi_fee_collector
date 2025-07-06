@@ -1,74 +1,19 @@
-# LI.FI Fee Collector Event Scraper
+# LI.FI Fee Collector Backend
 
-A comprehensive multi-chain event scraper system that monitors LI.FI FeeCollector smart contract events across multiple EVM chains, stores them in MongoDB, and provides a REST API for querying and managing the data.
+This directory contains the backend service for the LI.FI Fee Collector Event Scraper system. For a complete overview of the entire project, see the [main README.md](../README.md).
 
-## 🚀 Features
+## 🚀 Quick Start
 
-- **Multi-Chain Support**: Monitor events from multiple EVM chains simultaneously
-- **Real-time Event Scraping**: Continuously monitor smart contracts for `FeesCollected` events
-- **Dynamic Chain Management**: Add, remove, and configure chains at runtime via API
-- **REST API**: Complete REST API with comprehensive documentation
-- **Caching**: Redis-based caching for improved performance
-- **Health Monitoring**: Real-time health checks for all system components
-- **Rate Limiting**: Built-in rate limiting for API protection
-- **Comprehensive Testing**: Full test suite
-- **Docker Support**: Complete Docker containerization
-- **Swagger Documentation**: Interactive API documentation
-
-## 🏗️ Architecture
-
-```
-┌─────────────────┐    ┌─────────────────┐    ┌─────────────────┐
-│   Event Scraper │    │   MongoDB       │    │   REST API      │
-│   Service       │───▶│   Database      │◀───│   Server        │
-└─────────────────┘    └─────────────────┘    └─────────────────┘
-         │                       │                       │
-         ▼                       ▼                       ▼
-┌─────────────────┐    ┌─────────────────┐    ┌─────────────────┐
-│   Multi-Chain   │    │   Typegoose     │    │   Express.js    │
-│   RPC Providers │    │   Models        │    │   Endpoints     │
-└─────────────────┘    └─────────────────┘    └─────────────────┘
-```
-
-## 📋 Prerequisites
-
-- **Node.js** 18+ 
+### Prerequisites
+- **Node.js** 18+
 - **Docker** and **Docker Compose**
 - **MongoDB** 5.0+ (or use Docker)
 - **Redis** (or use Docker)
 
-## 🛠️ Installation
+### Local Development
 
-### Option 1: Docker (Recommended)
-
-1. **Clone the repository**
+1. **Install dependencies**
    ```bash
-   git clone <repository-url>
-   cd fee_collector
-   ```
-
-2. **Set up environment variables**
-   ```bash
-   cp env.example .env
-   # Edit .env with your configuration
-   ```
-
-3. **Start the services**
-   ```bash
-   docker-compose up -d
-   ```
-
-4. **Verify the installation**
-   ```bash
-   curl http://localhost:3000/health
-   ```
-
-### Option 2: Local Development
-
-1. **Clone and install dependencies**
-   ```bash
-   git clone <repository-url>
-   cd fee_collector
    npm install
    ```
 
@@ -87,6 +32,29 @@ A comprehensive multi-chain event scraper system that monitors LI.FI FeeCollecto
    ```bash
    npm run dev
    ```
+
+5. **Verify the installation**
+   ```bash
+   curl http://localhost:3000/health
+   ```
+
+### Docker Development
+
+```bash
+# Start all services
+docker-compose up -d
+
+# View logs
+docker-compose logs -f app
+
+# Rebuild and restart
+docker-compose down
+docker-compose build --no-cache app
+docker-compose up -d
+
+# Stop all services
+docker-compose down
+```
 
 ## 🔧 Configuration
 
@@ -126,13 +94,10 @@ LOG_FILE_PATH=logs/app.log
 
 ## 📚 API Documentation
 
-### Interactive Documentation
-
 Once the server is running, access the interactive Swagger documentation at:
+**🌐 http://localhost:3000/api-docs**
 
-**🌐 Swagger UI: http://localhost:3000/api-docs**
-
-### API Endpoints Overview
+### Key API Endpoints
 
 #### Events Endpoints
 - `GET /api/v1/events/integrator/{integrator}` - Query events by integrator address
@@ -142,7 +107,8 @@ Once the server is running, access the interactive Swagger documentation at:
 #### Chain Management Endpoints
 - `GET /api/v1/chains/status` - Get status of all chains
 - `GET /api/v1/chains/{chainId}/status` - Get status of specific chain
-- `POST /api/v1/chains/start` - Start a new chain worker
+- `POST /api/v1/chains` - Add and start a new chain worker
+- `PUT /api/v1/chains/{chainId}/start` - Start a specific chain worker
 - `PUT /api/v1/chains/{chainId}/stop` - Stop a chain worker
 - `PUT /api/v1/chains/{chainId}/update` - Update chain configuration
 - `DELETE /api/v1/chains/{chainId}` - Delete chain configuration
@@ -154,9 +120,9 @@ Once the server is running, access the interactive Swagger documentation at:
 
 ### Example API Usage
 
-#### 1. Start a New Chain
+#### 1. Add and Start a New Chain
 ```bash
-curl -X POST http://localhost:3000/api/v1/chains/start \
+curl -X POST http://localhost:3000/api/v1/chains \
   -H "Content-Type: application/json" \
   -d '{
     "chainId": 137,
@@ -209,39 +175,6 @@ npm run test:watch
 - **Integration Tests**: Database and blockchain service testing
 - **Health Tests**: System health endpoint testing
 
-## 🐳 Docker Commands
-
-### Development
-```bash
-# Start all services
-docker-compose up -d
-
-# View logs
-docker-compose logs -f app
-
-# Rebuild and restart
-docker-compose down
-docker-compose build --no-cache app
-docker-compose up -d
-
-# Stop all services
-docker-compose down
-```
-
-### Production
-```bash
-# Build production image
-docker build -t fee-collector:latest .
-
-# Run production container
-docker run -d \
-  --name fee-collector \
-  -p 3000:3000 \
-  -e MONGODB_URI=mongodb://your-mongodb:27017/fee_collector \
-  -e REDIS_URL=redis://your-redis:6379 \
-  fee-collector:latest
-```
-
 ## 📊 Monitoring
 
 ### Health Checks
@@ -286,7 +219,24 @@ The API provides real-time metrics:
 - Helmet.js for security headers
 - Content Security Policy
 
-## 🚀 Deployment
+## 🚀 Production Deployment
+
+### Docker Production Deployment
+
+```bash
+# Build production image
+docker build -t fee-collector:latest .
+
+# Run with production environment
+docker run -d \
+  --name fee-collector \
+  --restart unless-stopped \
+  -p 3000:3000 \
+  -e NODE_ENV=production \
+  -e MONGODB_URI=mongodb://your-mongodb:27017/fee_collector \
+  -e REDIS_URL=redis://your-redis:6379 \
+  fee-collector:latest
+```
 
 ### Production Checklist
 
@@ -309,67 +259,6 @@ The API provides real-time metrics:
    - Set up health check monitoring
    - Configure log aggregation
    - Set up alerting for failures
-
-### Docker Production Deployment
-
-```bash
-# Build production image
-docker build -t fee-collector:latest .
-
-# Run with production environment
-docker run -d \
-  --name fee-collector \
-  --restart unless-stopped \
-  -p 3000:3000 \
-  -e NODE_ENV=production \
-  -e MONGODB_URI=mongodb://your-mongodb:27017/fee_collector \
-  -e REDIS_URL=redis://your-redis:6379 \
-  fee-collector:latest
-```
-
-## 🤝 Contributing
-
-1. Fork the repository
-2. Create a feature branch (`git checkout -b feature/amazing-feature`)
-3. Commit your changes (`git commit -m 'Add amazing feature'`)
-4. Push to the branch (`git push origin feature/amazing-feature`)
-5. Open a Pull Request
-
-### Development Guidelines
-
-- Follow TypeScript best practices
-- Write comprehensive tests for new features
-- Update API documentation for new endpoints
-- Follow the existing code style and structure
-
-## 📝 License
-
-This project is licensed under the MIT License.
-
-## 🆘 Support
-
-### Common Issues
-
-1. **MongoDB Connection Issues**
-   - Check if MongoDB is running
-   - Verify connection string in `.env`
-   - Check network connectivity
-
-2. **Redis Connection Issues**
-   - Ensure Redis is running
-   - Verify Redis URL in `.env`
-   - Check Redis memory usage
-
-3. **Rate Limiting**
-   - Check current rate limits
-   - Monitor API usage patterns
-   - Adjust limits if needed
-
-### Getting Help
-
-- **Documentation**: Check the Swagger UI at `/api-docs`
-- **Issues**: Create an issue on GitHub
-- **Discussions**: Use GitHub Discussions for questions
 
 ## 📈 Performance
 
@@ -396,6 +285,31 @@ This project is licensed under the MIT License.
 - **Database Scaling**: Use MongoDB replica sets or sharding
 - **Redis Scaling**: Use Redis Cluster for high availability
 - **Monitoring**: Implement comprehensive monitoring and alerting
+
+## 🆘 Support
+
+### Common Issues
+
+1. **MongoDB Connection Issues**
+   - Check if MongoDB is running
+   - Verify connection string in `.env`
+   - Check network connectivity
+
+2. **Redis Connection Issues**
+   - Ensure Redis is running
+   - Verify Redis URL in `.env`
+   - Check Redis memory usage
+
+3. **Rate Limiting**
+   - Check current rate limits
+   - Monitor API usage patterns
+   - Adjust limits if needed
+
+### Getting Help
+
+- **Documentation**: Check the Swagger UI at `/api-docs`
+- **Issues**: Create an issue on GitHub
+- **Discussions**: Use GitHub Discussions for questions
 
 ---
 

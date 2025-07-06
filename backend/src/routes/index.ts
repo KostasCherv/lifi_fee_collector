@@ -25,7 +25,8 @@ router.get(`${API_PREFIX}`, (_req, res) => {
       chains: {
         'GET /chains/status': 'Get status of all chains',
         'GET /chains/:chainId/status': 'Get status of specific chain',
-        'POST /chains/start': 'Start a new chain worker',
+        'POST /chains': 'Add and start a new chain worker',
+        'PUT /chains/:chainId/start': 'Start a specific chain worker',
         'PUT /chains/:chainId/stop': 'Stop a specific chain worker',
         'PUT /chains/:chainId/update': 'Update chain configuration',
         'DELETE /chains/:chainId': 'Delete chain configuration',

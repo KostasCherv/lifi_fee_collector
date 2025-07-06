@@ -158,8 +158,12 @@ Once the backend is running, access the interactive Swagger documentation at:
 
 #### Chain Management
 - `GET /api/v1/chains/status` - Get all chains status
-- `POST /api/v1/chains/start` - Start a new chain worker
+- `GET /api/v1/chains/{chainId}/status` - Get specific chain status
+- `POST /api/v1/chains` - Add and start a new chain worker
+- `PUT /api/v1/chains/{chainId}/start` - Start a specific chain worker
 - `PUT /api/v1/chains/{chainId}/stop` - Stop a chain worker
+- `PUT /api/v1/chains/{chainId}/update` - Update chain configuration
+- `DELETE /api/v1/chains/{chainId}` - Delete chain configuration
 
 #### Health
 - `GET /health` - Overall system health
