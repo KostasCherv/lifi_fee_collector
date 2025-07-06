@@ -26,8 +26,10 @@ class BlockchainService {
       
       logger.info(`✅ Initialized ${this.providers.size} blockchain providers`);
       
-      // Start health monitoring
-      this.startHealthMonitoring();
+      // Start health monitoring only in non-test environments
+      if (process.env['NODE_ENV'] !== 'test') {
+        this.startHealthMonitoring();
+      }
       
     } catch (error) {
       logger.error('Failed to initialize blockchain providers:', error);
@@ -307,7 +309,6 @@ class BlockchainService {
     
     // Clear providers
     this.providers.clear();
-    
     logger.info('Blockchain service shutdown complete');
   }
 }
