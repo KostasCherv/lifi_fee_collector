@@ -658,6 +658,7 @@ export const addChain = async (
       lastProcessedBlock: value.startingBlock || 70000000,
       isActive: true,
       lastRunAt: new Date(),
+      workerStatus: 'running',
       errorCount: 0,
     });
 
@@ -725,6 +726,13 @@ export const startChain = async (
       name: chainConfig.name,
     });
 
+    // Update scraper state
+    await ScraperStateModel.findOneAndUpdate(
+      { chainId: chainIdNum },
+      { isActive: true, workerStatus: 'running' },
+      { upsert: true }
+    );
+
     await clearApiCache();
 
     res.json({
@@ -776,7 +784,7 @@ export const stopChain = async (
     // Update scraper state
     await ScraperStateModel.findOneAndUpdate(
       { chainId: chainIdNum },
-      { isActive: false },
+      { isActive: false, workerStatus: 'stopped' },
       { upsert: true }
     );
 
