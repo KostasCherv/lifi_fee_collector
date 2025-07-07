@@ -1,23 +1,11 @@
-# Use Node.js 18 Alpine for smaller image size
-FROM node:18-alpine
+FROM node:22-slim
 
-# Set working directory
+ENV NODE_ENV=production
+
+RUN mkdir -p /app
 WORKDIR /app
 
-# Copy package files and install dependencies
-COPY package*.json ./
-RUN npm ci
-
-# Copy source code and build
 COPY . .
-RUN npm run build && npm prune --production
+RUN npm run build
 
-# Create non-root user and set permissions
-RUN addgroup -g 1001 -S nodejs && \
-    adduser -S nodejs -u 1001 && \
-    chown -R nodejs:nodejs /app
-USER nodejs
-
-# Expose port and start application
-EXPOSE 3000
-CMD ["node", "dist/server.js"] 
+ENTRYPOINT ["node", "dist/server.js"]
