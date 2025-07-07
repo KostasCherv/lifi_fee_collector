@@ -30,12 +30,9 @@ export const logger = winston.createLogger({
   ],
 });
 
-// If we're not in production, log to console as well
-if (config.app.nodeEnv !== 'production') {
-  logger.add(new winston.transports.Console({
-    format: winston.format.combine(
-      winston.format.colorize(),
-      winston.format.simple()
-    ),
-  }));
-} 
+logger.add(new winston.transports.Console({
+  format: winston.format.combine(
+    winston.format.colorize(),
+    winston.format.simple()
+  ),
+}));
