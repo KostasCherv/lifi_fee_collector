@@ -140,14 +140,26 @@ class ScraperService {
   private async startAllChains(): Promise<void> {
     const enabledChains = await ChainConfigurationModel.find({ isEnabled: true });
     
-    for (const chainConfig of enabledChains) {
+    // Start all chains in parallel
+    const startPromises = enabledChains.map(async (chainConfig) => {
       try {
         await this.startChain(chainConfig.chainId);
+        return { chainId: chainConfig.chainId, success: true };
       } catch (error) {
         logger.error(`Failed to start chain ${chainConfig.chainId}:`, error);
-        // Continue with other chains
+        return { chainId: chainConfig.chainId, success: false, error };
       }
-    }
+    });
+    
+    const results = await Promise.allSettled(startPromises);
+    
+    // Log summary of results
+    const successful = results.filter(result => 
+      result.status === 'fulfilled' && result.value.success
+    ).length;
+    const failed = results.length - successful;
+    
+    logger.info(`Started ${successful} chains successfully, ${failed} chains failed to start`);
   }
 
   private async processChain(chainId: number): Promise<void> {
