@@ -20,4 +20,4 @@ USER nodejs
 
 # Expose port and start application
 EXPOSE 3000
-CMD ["npm", "start"] 
+CMD ["node", "dist/server.js"] 
