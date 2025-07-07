@@ -4,35 +4,20 @@ FROM node:18-alpine
 # Set working directory
 WORKDIR /app
 
-# Copy package files
+# Copy package files and install dependencies
 COPY package*.json ./
-
-# Install all dependencies (including dev dependencies for building)
 RUN npm ci
 
-# Copy source code
+# Copy source code and build
 COPY . .
+RUN npm run build && npm prune --production
 
-# Build the application
-RUN npm run build
-
-# Remove dev dependencies to reduce image size
-RUN npm prune --production
-
-# Create non-root user
-RUN addgroup -g 1001 -S nodejs
-RUN adduser -S nodejs -u 1001
-
-# Change ownership of the app directory
-RUN chown -R nodejs:nodejs /app
+# Create non-root user and set permissions
+RUN addgroup -g 1001 -S nodejs && \
+    adduser -S nodejs -u 1001 && \
+    chown -R nodejs:nodejs /app
 USER nodejs
 
-# Expose port
+# Expose port and start application
 EXPOSE 3000
-
-# Health check
-HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
-  CMD node dist/health-check.js
-
-# Start the application
 CMD ["npm", "start"] 
