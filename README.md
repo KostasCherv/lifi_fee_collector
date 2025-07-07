@@ -59,10 +59,14 @@ fee_collector/
 │   │   ├── routes/          # API routes
 │   │   ├── services/        # Business logic
 │   │   ├── middleware/      # Express middleware
+│   │   ├── config/          # Configuration files
+│   │   ├── types/           # TypeScript type definitions
 │   │   └── utils/           # Utility functions
 │   ├── test/                # Test files
 │   ├── Dockerfile           # Backend container
-│   └── package.json
+│   ├── docker-compose.yml   # Local development setup
+│   ├── package.json
+│   └── README.md
 ├── frontend/                # React frontend
 │   ├── src/
 │   │   ├── components/      # React components
@@ -70,8 +74,6 @@ fee_collector/
 │   │   └── types/           # TypeScript types
 │   ├── public/              # Static assets
 │   └── package.json
-├── docker-compose.yml       # Local development setup
-├── DEPLOYMENT_GUIDE.md      # Deployment instructions
 └── README.md               # This file
 ```
 
@@ -137,12 +139,14 @@ fee_collector/
 
 1. **Start all services**
    ```bash
+   cd backend
    docker-compose up -d
    ```
 
 2. **Access the applications**
-   - Frontend: http://localhost:5173
    - Backend API: http://localhost:3000
+   - MongoDB: localhost:27017
+   - Redis: localhost:6379
 
 ## 📚 API Documentation
 
@@ -189,13 +193,27 @@ npm run build             # Build for production
 
 ## 🚀 Deployment
 
-For detailed deployment instructions using free cloud services, see [DEPLOYMENT_GUIDE.md](./DEPLOYMENT_GUIDE.md).
+**Recommended Free Tier Stack:**
+- **Backend**: Railway, Fly.io, or Render (with uptime monitoring)
+- **Database**: MongoDB Atlas (free tier)
+- **Cache**: Upstash Redis (free tier)
 
-**Recommended Stack:**
-- **Frontend**: Vercel
-- **Backend**: Railway
-- **Database**: MongoDB Atlas
-- **Cache**: Upstash Redis
+**Quick Deployment Options:**
+
+1. **Railway** (Recommended for demos):
+   - Connect your GitHub repository
+   - Automatic deployments
+   - $5/month free credit
+
+2. **Fly.io**:
+   - Generous free tier (3 VMs)
+   - Global deployment
+   - Docker support
+
+3. **Render**:
+   - Free tier available
+   - Use UptimeRobot to keep it awake
+   - Simple deployment
 
 ## 🔧 Configuration
 
@@ -242,7 +260,7 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 If you encounter any issues or have questions:
 1. Check the [API documentation](http://localhost:3000/api-docs)
-2. Review the [deployment guide](./DEPLOYMENT_GUIDE.md)
+2. Review the backend [README.md](./backend/README.md) for detailed setup instructions
 3. Open an issue on GitHub
 
 ---
