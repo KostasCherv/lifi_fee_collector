@@ -1,6 +1,17 @@
 # Acceptance Criteria Code Mapping
 
-This document maps each acceptance criterion from the original requirements to the specific code files and sections that satisfy them.
+## 📝 Core Logic Summary
+
+The system is architected to efficiently and reliably scrape `FeesCollected` events from EVM-compatible blockchains (with a focus on Polygon, but extensible to others), persist them in MongoDB using Typegoose, and expose them via a REST API. The core flow is as follows:
+
+- **Scraper Service**: Periodically queries the FeeCollector smart contract for new `FeesCollected` events, starting from a configurable block (default: 70000000) and tracking the last processed block per chain to avoid redundant scans. The scraper is designed to be restartable and stateless between runs, with progress persisted in the database.
+- **Blockchain Integration**: Uses ethers v5 to connect to chain RPC endpoints and query contract events in block ranges. Event parsing is robust and compatible with the contract ABI.
+- **Deduplication & State**: Each event is uniquely identified by chainId, transactionHash, and logIndex. The system prevents duplicate storage by checking these composite keys before insertion. Scraper state (last processed block, timestamps) is persisted for each chain.
+- **Persistence**: Parsed events are stored in MongoDB via Typegoose models, with relevant fields indexed for efficient querying (e.g., by integrator, chain, or block).
+- **REST API**: Exposes endpoints to retrieve events, including filtering by integrator and chain, with pagination and validation. The API is documented and production-ready.
+- **Deployment**: The application is containerized with Docker and orchestrated via Docker Compose, supporting local and production deployments.
+
+This architecture ensures efficient, reliable, and scalable event ingestion and retrieval, with strong guarantees against data duplication and loss, and is designed for extensibility to additional chains and event types.
 
 ## 📋 Original Acceptance Criteria
 
@@ -26,24 +37,19 @@ This document maps each acceptance criterion from the original requirements to t
 
 #### Core Scraping Logic
 - **File**: `src/services/scraper.ts`
-  - **Lines 15-50**: `start()` method - Main scraper service initialization
-  - **Lines 70-110**: `startChain()` method - Individual chain scraping setup
-  - **Lines 140-170**: `processChain()` method - Core block processing logic
-
+  - `start()` method: Main scraper service initialization
+  - `startChain()` method: Individual chain scraping setup
+  - `processChain()` method: Core block processing logic
 - **File**: `src/services/blockchain.ts`
-  - **Lines 1-50**: Blockchain service initialization and provider management
-  - **Lines 80-120**: `loadFeeCollectorEvents()` method - Event loading from smart contract
-  - **Lines 130-180**: `parseFeeCollectorEvents()` method - Event parsing and validation
-
-#### Multi-Chain Support
+  - Blockchain service initialization and provider management
+  - `loadFeeCollectorEvents()` method: Event loading from smart contract
+  - `parseFeeCollectorEvents()` method: Event parsing and validation
 - **File**: `src/models/ChainConfiguration.ts`
-  - **Lines 1-51**: Chain configuration model for managing multiple chains
-  - **Lines 10-25**: Chain-specific settings (RPC URL, contract address, scan interval)
-
-#### Event Processing
+  - Chain configuration model for managing multiple chains
+  - Chain-specific settings (RPC URL, contract address, scan interval)
 - **File**: `src/services/eventProcessor.ts`
-  - **Lines 10-50**: `processBlockRange()` method - Main event processing pipeline
-  - **Lines 60-90**: Event storage and duplicate prevention
+  - `processBlockRange()` method: Main event processing pipeline
+  - Event storage and duplicate prevention
 
 ---
 
@@ -53,20 +59,15 @@ This document maps each acceptance criterion from the original requirements to t
 
 #### Service Lifecycle Management
 - **File**: `src/services/scraper.ts`
-  - **Lines 15-50**: `start()` method - Service startup with database connection and provider initialization
-  - **Lines 55-70**: `stop()` method - Graceful shutdown with interval cleanup
-  - **Lines 255-274**: `gracefulShutdown()` method - Proper shutdown handling
-
-#### Per-Chain Worker Management
+  - `start()` method: Service startup with database connection and provider initialization
+  - `stop()` method: Graceful shutdown with interval cleanup
+  - `gracefulShutdown()` method: Proper shutdown handling
 - **File**: `src/services/scraper.ts`
-  - **Lines 70-110**: `startChain()` method - Individual chain worker startup
-  - **Lines 115-130**: `stopChain()` method - Individual chain worker shutdown
-  - **Lines 135-140**: `startAllChains()` method - Bulk chain startup
-
-#### State Persistence
+  - `startChain()` and `stopChain()` methods: Individual chain worker management
+  - `startAllChains()` method: Bulk chain startup
 - **File**: `src/models/ScraperState.ts`
-  - **Lines 1-42**: Scraper state model for tracking progress across restarts
-  - **Lines 10-15**: `lastProcessedBlock` field - Tracks where scraping left off
+  - Scraper state model for tracking progress across restarts
+  - `lastProcessedBlock` field: Tracks where scraping left off
 
 ---
 
@@ -76,24 +77,14 @@ This document maps each acceptance criterion from the original requirements to t
 
 #### Block Range Calculation
 - **File**: `src/services/eventProcessor.ts`
-  - **Lines 120-150**: `calculateBlockRange()` method - Efficient block range calculation
-  - **Lines 125-135**: Uses `lastProcessedBlock` to determine next block range
-  - **Lines 140-145**: Prevents scanning beyond latest block
-
-#### State Tracking
+  - `calculateBlockRange()` method: Efficient block range calculation using `lastProcessedBlock`
+  - Prevents scanning beyond latest block
 - **File**: `src/models/ScraperState.ts`
-  - **Lines 10-15**: `lastProcessedBlock` field - Persistent block tracking
-  - **Lines 20-25**: `lastRunAt` field - Timestamp tracking for monitoring
-
-#### Duplicate Prevention
+  - `lastProcessedBlock` and `lastRunAt` fields: Persistent block and timestamp tracking
 - **File**: `src/services/eventProcessor.ts`
-  - **Lines 60-80**: Duplicate detection using composite keys (chainId + transactionHash + logIndex)
-  - **Lines 85-90**: Filters out existing events before database insertion
-
-#### Efficient Processing
-- **File**: `src/services/eventProcessor.ts`
-  - **Lines 15-20**: Batch processing of events
-  - **Lines 25-30**: Configurable block range limits to prevent overwhelming RPC providers
+  - Duplicate detection using composite keys (chainId + transactionHash + logIndex)
+  - Filters out existing events before database insertion
+  - Batch processing of events and configurable block range limits
 
 ---
 
@@ -103,23 +94,14 @@ This document maps each acceptance criterion from the original requirements to t
 
 #### Database Model
 - **File**: `src/models/FeeCollectedEvent.ts`
-  - **Lines 1-45**: Complete Typegoose model with all required fields
-  - **Lines 10-15**: `chainId` field with indexing
-  - **Lines 20-25**: `integrator` field with indexing
-  - **Lines 30-35**: `integratorFee` and `lifiFee` as BigNumber strings
-  - **Lines 40-45**: Proper timestamps and indexing
-
-#### Database Connection
+  - Complete Typegoose model with all required fields and indexing
 - **File**: `src/services/database.ts`
-  - **Lines 1-90**: MongoDB connection management with Typegoose
-  - **Lines 15-30**: Connection initialization and error handling
-  - **Lines 35-50**: Connection health monitoring
-
-#### Event Storage Logic
+  - MongoDB connection management with Typegoose
+  - Connection initialization, error handling, and health monitoring
 - **File**: `src/services/eventProcessor.ts`
-  - **Lines 60-90**: `storeEvents()` method - Database insertion with duplicate prevention
-  - **Lines 95-110**: Event document conversion and batch insertion
-  - **Lines 115-120**: Error handling for database operations
+  - `storeEvents()` method: Database insertion with duplicate prevention
+  - Event document conversion and batch insertion
+  - Error handling for database operations
 
 ---
 
@@ -129,25 +111,12 @@ This document maps each acceptance criterion from the original requirements to t
 
 #### Main Integrator Endpoint
 - **File**: `src/controllers/eventsController.ts`
-  - **Lines 80-150**: `getEventsByIntegrator()` function - Main integrator query endpoint
-  - **Lines 90-100**: Input validation for integrator address
-  - **Lines 105-120**: Query building with chain filtering
-  - **Lines 125-140**: Pagination and sorting support
-
-#### Route Definition
+  - `getEventsByIntegrator()` function: Main integrator query endpoint with input validation, query building, pagination, and sorting
 - **File**: `src/routes/events.ts`
-  - **Lines 10-20**: Route definition for `/events/integrator/:integrator`
-  - **Lines 25-35**: Query parameter handling
-
-#### Additional Event Endpoints (Bonus)
+  - Route definition for `/events/integrator/:integrator` and query parameter handling
 - **File**: `src/controllers/eventsController.ts`
-  - **Lines 286-350**: `getEventsByChain()` function - Chain-specific queries
-  - **Lines 373-420**: `getEventsWithFilters()` function - Advanced filtering
-
-#### API Documentation
-- **File**: `src/controllers/eventsController.ts`
-  - **Lines 5-75**: Swagger documentation for all event endpoints
-  - **Lines 80-85**: Request/response schemas and examples
+  - Additional endpoints for chain-specific and advanced filtering
+  - Swagger documentation for all event endpoints
 
 ---
 
@@ -157,23 +126,11 @@ This document maps each acceptance criterion from the original requirements to t
 
 #### Dockerfile
 - **File**: `Dockerfile`
-  - **Lines 1-10**: Multi-stage build with Node.js 18 Alpine
-  - **Lines 15-25**: Dependency installation and build process
-  - **Lines 30-35**: Security with non-root user
-  - **Lines 40-45**: Health checks and proper startup
-
-#### Docker Compose
+  - Multi-stage build, dependency installation, security, health checks, and startup
 - **File**: `docker-compose.yml`
-  - **Lines 1-44**: Complete service orchestration
-  - **Lines 5-15**: MongoDB service configuration
-  - **Lines 20-30**: Redis service for caching
-  - **Lines 35-40**: Application service with proper networking
-
-#### Docker Scripts
+  - Service orchestration for MongoDB, Redis, and the application
 - **File**: `package.json`
-  - **Lines 15-16**: Docker build and run scripts
-  - **Lines 15**: `docker:build` script
-  - **Lines 16**: `docker:run` script
+  - Docker build and run scripts
 
 ---
 
@@ -183,79 +140,35 @@ This document maps each acceptance criterion from the original requirements to t
 
 #### TypeScript Configuration
 - **File**: `tsconfig.json`
-  - **Lines 1-44**: Complete TypeScript configuration
-  - **Lines 5-15**: Compiler options and module resolution
-  - **Lines 20-30**: Path mapping and output configuration
-
-#### Package Configuration
+  - Complete TypeScript configuration, compiler options, and path mapping
 - **File**: `package.json`
-  - **Lines 1-73**: Complete project configuration
-  - **Lines 5-15**: Build and development scripts
-  - **Lines 20-35**: All required dependencies
-  - **Lines 40-60**: Development dependencies and tools
-
-#### Comprehensive Documentation
+  - Build and development scripts, dependencies, and tools
 - **File**: `README.md`
-  - **Lines 1-100**: Project overview and features
-  - **Lines 105-150**: Installation instructions (Docker and local)
-  - **Lines 155-200**: Configuration and environment setup
-  - **Lines 205-300**: API documentation and usage examples
-  - **Lines 305-350**: Testing and development instructions
-  - **Lines 355-402**: Deployment and monitoring information
-
-#### Development Tools
-- **File**: `.eslintrc.js`
-  - **Lines 1-28**: ESLint configuration for code quality
-- **File**: `.prettierrc`
-  - **Lines 1-10**: Prettier configuration for code formatting
-- **File**: `jest.config.js`
-  - **Lines 1-23**: Jest configuration for testing
+  - Project overview, installation instructions, configuration, API documentation, testing, and deployment information
+- **File**: `.eslintrc.js`, `.prettierrc`, `jest.config.js`
+  - Code quality, formatting, and testing configuration
 
 ---
 
 ## 🎯 Additional Features Implemented (Beyond Requirements)
 
-### Multi-Chain Architecture
-- **File**: `src/controllers/chainsController.ts`
-  - **Lines 1-936**: Complete chain management API
-  - **Lines 50-150**: Chain startup and configuration
-  - **Lines 200-300**: Chain status monitoring
-  - **Lines 350-500**: Dynamic chain configuration
-
-### Testing Suite
-- **Directory**: `src/test/`
-  - **File**: `src/test/api/events.test.ts` - Event API tests
-  - **File**: `src/test/api/chains.test.ts` - Chain management tests
-  - **File**: `src/test/blockchain.test.ts` - Blockchain service tests
-  - **File**: `src/test/database.test.ts` - Database tests
-
-### Health Monitoring
-- **File**: `src/controllers/healthController.ts`
-  - **Lines 1-202**: Comprehensive health check endpoints
-  - **Lines 50-100**: Database health monitoring
-  - **Lines 105-150**: Scraper service health checks
-  - **Lines 155-202**: System metrics and status
-
-### Security and Performance
-- **File**: `src/middleware/`
-  - Rate limiting, CORS, error handling middleware
-- **File**: `src/utils/logger.ts`
-  - Structured logging with different levels
-- **File**: `src/config/`
-  - Environment-based configuration management
-
----
+- Multi-chain architecture and chain management API
+- Comprehensive testing suite for API, blockchain, and database
+- Health monitoring endpoints and system metrics
+- Security and performance middleware (rate limiting, CORS, error handling)
+- Structured logging and environment-based configuration
+- Frontend dashboard for event monitoring and management (React + TypeScript)
 
 ## 📊 Implementation Summary
 
-| Criterion | Status | Key Files | Lines |
-|-----------|--------|-----------|-------|
-| Core Scraping | ✅ Complete | `src/services/scraper.ts` | 15-170 |
-| State Management | ✅ Complete | `src/services/eventProcessor.ts` | 120-150 |
-| Database Storage | ✅ Complete | `src/models/FeeCollectedEvent.ts` | 1-45 |
-| REST API | ✅ Complete | `src/controllers/eventsController.ts` | 80-150 |
-| Docker Support | ✅ Complete | `Dockerfile` | 1-38 |
-| TypeScript | ✅ Complete | `tsconfig.json` | 1-44 |
-| Documentation | ✅ Complete | `README.md` | 1-402 |
+| Criterion | Status | Key Files 
+|-----------|--------|-----------|
+| Core Scraping | ✅ Complete | `src/services/scraper.ts` |
+| State Management | ✅ Complete | `src/services/eventProcessor.ts` | 
+| Database Storage | ✅ Complete | `src/models/FeeCollectedEvent.ts` |
+| REST API | ✅ Complete | `src/controllers/eventsController.ts` | 
+| Docker Support | ✅ Complete | `Dockerfile` | 
+| TypeScript | ✅ Complete | `tsconfig.json` |
+| Documentation | ✅ Complete | `README.md` | 
 
 **Total Implementation**: All criteria fully met with significant additional value added through multi-chain support, comprehensive testing, production-ready features, and extensive documentation. 
