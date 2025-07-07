@@ -12,7 +12,7 @@ async function startServer() {
     await databaseService.connect();
     
     // Start scraper service
-    await scraperService.start();
+    scraperService.start();
     
     // Start server
     app.listen(port, () => {
