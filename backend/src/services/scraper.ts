@@ -201,6 +201,7 @@ class ScraperService {
     } finally {
       // Always remove from processing set, even if there was an error
       this.processingChains.delete(chainId);
+      
     }
   }
 
@@ -213,6 +214,7 @@ class ScraperService {
           $inc: { errorCount: 1 },
           lastError: error instanceof Error ? error.message : 'Unknown error',
           lastRunAt: new Date(),
+          workerStatus: 'stopped',
         },
         { upsert: true }
       );
