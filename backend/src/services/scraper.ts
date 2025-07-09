@@ -191,6 +191,12 @@ class ScraperService {
       if (!result.success) {
         throw new Error(result.error || 'Unknown processing error');
       }
+
+      // Update the last processed block
+      await ScraperStateModel.findOneAndUpdate(
+        { chainId },
+        { lastProcessedBlock: blockRange.toBlock }
+      );
       
       logger.debug(`Processed ${result.processedEvents} events for chain ${chainId} in ${result.processingTime}ms`);
       
