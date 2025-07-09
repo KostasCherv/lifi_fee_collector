@@ -2,6 +2,9 @@
 
 **🚀 Live Demo:** [https://lifi-fee-collector.vercel.app/](https://lifi-fee-collector.vercel.app/)
 
+**🔧 Production Backend:** [https://lifi-fee-collector-production.up.railway.app/](https://lifi-fee-collector-production.up.railway.app/)
+
+
 A comprehensive multi-chain event scraper system that monitors LI.FI FeeCollector smart contract events across multiple EVM chains, stores them in MongoDB, and provides both a REST API and a modern React frontend for querying and managing the data.
 
 ## 🚀 Features
@@ -104,6 +107,8 @@ fee_collector/
 
 You can try the live frontend at: [https://lifi-fee-collector.vercel.app/](https://lifi-fee-collector.vercel.app/)
 
+The production backend API is available at: [https://lifi-fee-collector-production.up.railway.app/](https://lifi-fee-collector-production.up.railway.app/)
+
 ### Prerequisites
 - **Node.js** 18+
 - **Docker** and **Docker Compose**
@@ -198,6 +203,8 @@ npm run build             # Build for production
 ## 🚀 Deployment
 
 The latest frontend is deployed at: [https://lifi-fee-collector.vercel.app/](https://lifi-fee-collector.vercel.app/)
+
+The production backend is deployed on Railway at: [https://lifi-fee-collector-production.up.railway.app/](https://lifi-fee-collector-production.up.railway.app/)
 
 **Recommended Free Tier Stack:**
 - **Backend**: Railway, Fly.io, or Render (with uptime monitoring)
