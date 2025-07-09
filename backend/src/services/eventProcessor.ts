@@ -16,6 +16,7 @@ class EventProcessor {
       
       if (rawEvents.length === 0) {
         logger.info(`No events found for chain ${chainId} in block range ${fromBlock}-${toBlock}`);
+        await this.updateScraperState(chainId, toBlock);
         return {
           chainId,
           processedEvents: 0,
