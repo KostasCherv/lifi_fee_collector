@@ -1,7 +1,5 @@
 # LI.FI Fee Collector Event Scraper
 
-**🚀 Live Demo:** [https://lifi-fee-collector.vercel.app/](https://lifi-fee-collector.vercel.app/)
-
 **🔧 Production Backend:** [https://lifi-fee-collector-production.up.railway.app/](https://lifi-fee-collector-production.up.railway.app/)
 
 
