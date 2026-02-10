@@ -1,8 +1,5 @@
 # LI.FI Fee Collector Event Scraper
 
-**🔧 Production Backend:** [https://lifi-fee-collector-production.up.railway.app/](https://lifi-fee-collector-production.up.railway.app/)
-
-
 A comprehensive multi-chain event scraper system that monitors LI.FI FeeCollector smart contract events across multiple EVM chains, stores them in MongoDB, and provides both a REST API and a modern React frontend for querying and managing the data.
 
 ## 🚀 Features
